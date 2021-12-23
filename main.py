@@ -2,7 +2,7 @@ import pygame
 
 
 width, height = 700, 700
-#def draw(screen):
+# def draw(screen):
 #    screen.fill((0, 0, 0))
 #    pygame.draw.line(screen, (255, 255, 255), (0, 0), (w, h), 5)
 #    pygame.draw.line(screen, (255, 255, 255), (w, 0), (0, h), 5)
