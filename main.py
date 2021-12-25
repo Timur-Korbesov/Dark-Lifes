@@ -1,14 +1,17 @@
 import os
 import sys
 import pygame
+import random
 
 pygame.init()
 pygame.key.set_repeat(200, 70)
 
 FPS = 100
-WIDTH = 600
-HEIGHT = 600
+WIDTH = 700
+HEIGHT = 650
 STEP = 10
+LEFT_IND = 50
+TOP_IND = 50
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
@@ -63,10 +66,28 @@ def generate_level(level):
                 Tile('floor2', x, y)
             # Walls
             elif level[y][x] == '#':
-                Tile('wall', x, y)
+                Tile('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
+                Tile('wall_top', x, y - 1)
+            elif level[y][x] == '+':
+                Tile('wall_bottom', x, y - 1)
+
+            elif level[y][x] == '[':
+                Tile('wall_left', x, y - 1)
+            elif level[y][x] == ']':
+                Tile('wall_right', x, y - 1)
+
+            elif level[y][x] == '{':
+                Tile('wall_side_left_top', x, y - 1)
+            elif level[y][x] == '}':
+                Tile('wall_side_right_top', x, y - 1)
+
+            elif level[y][x] == '(':
+                Tile('wall_side_left_bottom', x, y - 1)
+            elif level[y][x] == ')':
+                Tile('wall_side_right_bottom', x, y - 1)
             # Doors
             elif level[y][x] == '*':
-                Tile('door', x, y)
+                Tile('door', x, y - 1)
             # Hero
             elif level[y][x] == '@':
                 Tile('floor1', x, y)
@@ -114,73 +135,87 @@ def start_screen():
         clock.tick(FPS)
 
 
-tile_images = {'wall': load_image('tiles/wall/wall_1.png', 50, 50),
-               'floor1': load_image('tiles/floor/floor_1.png', 50, 50),
-               'floor2': load_image('tiles/floor/floor_9.png', 50, 50),
-               'door': load_image('tiles/wall/door_anim_opening_f0.png', 50, 50)}
+tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
+               'wall_left': load_image('tiles/wall/wall_top_left.png', 60, 60),
+               'wall_right': load_image('tiles/wall/wall_top_right.png', 60, 60),
+               'wall_bottom': load_image('tiles/wall/wall_bottom.png', 60, 60),
 
-player_image = load_image('heroes/knight/knight_idle_anim_f0.png', 50, 50)
+               'wall_side_left_top': load_image('tiles/wall/wall_top_inner_left.png', 60, 60),
+               'wall_side_right_top': load_image('tiles/wall/wall_top_inner_right.png', 60, 60),
+               'wall_side_left_bottom': load_image('tiles/wall/wall_bottom_inner_left.png', 60, 60),
+               'wall_side_right_bottom': load_image('tiles/wall/wall_bottom_inner_right.png', 60, 60),
 
-enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png', 50, 50)}
+               'wall_1': load_image('tiles/wall/wall_1.png', 60, 60),
+               'wall_2': load_image('tiles/wall/wall_2.png', 60, 60),
+               'wall_3': load_image('tiles/wall/wall_3.png', 60, 60),
+               'wall_crack': load_image('tiles/wall/wall_crack.png', 60, 60),
 
-tile_width = tile_height = 50
+               'floor1': load_image('tiles/floor/floor_1.png', 60, 60),
+               'floor2': load_image('tiles/floor/floor_9.png', 60, 60),
+               'door': load_image('tiles/wall/door_anim_opening_f0.png', 60, 60)}
+
+player_image = load_image('heroes/knight/knight_idle_anim_f0.png', 60, 60)
+
+enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png', 60, 60)}
+
+tile_width = tile_height = 60
 
 
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tiles_group, all_sprites)
         self.image = tile_images[tile_type]
-        self.rect = self.image.get_rect().move(tile_width * pos_x, tile_height * pos_y)
+        self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x, TOP_IND + tile_height * pos_y)
 
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, all_sprites)
         self.image = player_image
-        self.rect = self.image.get_rect().move(tile_width * pos_x + 15, tile_height * pos_y + 5)
+        self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x + 15, TOP_IND + tile_height * pos_y + 5)
 
 
 class Enemie_Goblin(pygame.sprite.Sprite):
     def __init__(self, name_enemie, pos_x, pos_y):
         super().__init__(enemies_group, all_sprites)
         self.image = enemies[name_enemie]
-        self.rect = self.image.get_rect().move(tile_width * pos_x + 15, tile_height * pos_y + 5)
+        self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x + 15, TOP_IND + tile_height * pos_y + 5)
 
 
-# class Camera:
-#     # зададим начальный сдвиг камеры и размер поля для возможности реализации циклического сдвига
-#     def __init__(self, field_size):
-#         self.dx = 0
-#         self.dy = 0
-#         self.field_size = field_size
-#
-#     # сдвинуть объект obj на смещение камеры
-#     def apply(self, obj):
-#         obj.rect.x += self.dx
-#         # вычислим координату клитки, если она уехала влево за границу экрана
-#         if obj.rect.x < -obj.rect.width:
-#             obj.rect.x += (self.field_size[0] + 1) * obj.rect.width
-#         # вычислим координату клитки, если она уехала вправо за границу экрана
-#         if obj.rect.x >= (self.field_size[0]) * obj.rect.width:
-#             obj.rect.x += -obj.rect.width * (1 + self.field_size[0])
-#         obj.rect.y += self.dy
-#         # вычислим координату клитки, если она уехала вверх за границу экрана
-#         if obj.rect.y < -obj.rect.height:
-#             obj.rect.y += (self.field_size[1] + 1) * obj.rect.height
-#         # вычислим координату клитки, если она уехала вниз за границу экрана
-#         if obj.rect.y >= (self.field_size[1]) * obj.rect.height:
-#             obj.rect.y += -obj.rect.height * (1 + self.field_size[1])
-#
-#     # позиционировать камеру на объекте target
-#     def update(self, target):
-#         self.dx = -(target.rect.x + target.rect.w // 2 - WIDTH // 2)
-#         self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
+class Camera:
+    # зададим начальный сдвиг камеры и размер поля для возможности реализации циклического сдвига
+    def __init__(self, field_size):
+        self.dx = 0
+        self.dy = 0
+        self.field_size = field_size
+
+    # сдвинуть объект obj на смещение камеры
+    def apply(self, obj):
+        obj.rect.x += self.dx
+    #     # вычислим координату клитки, если она уехала влево за границу экрана
+    #     if obj.rect.x < -obj.rect.width:
+    #         obj.rect.x += (self.field_size[0] + 1) * obj.rect.width
+    #     # вычислим координату клитки, если она уехала вправо за границу экрана
+    #     if obj.rect.x >= (self.field_size[0]) * obj.rect.width:
+    #         obj.rect.x += -obj.rect.width * (1 + self.field_size[0])
+        obj.rect.y += self.dy
+    #     # вычислим координату клитки, если она уехала вверх за границу экрана
+    #     if obj.rect.y < -obj.rect.height:
+    #         obj.rect.y += (self.field_size[1] + 1) * obj.rect.height
+    #     # вычислим координату клитки, если она уехала вниз за границу экрана
+    #     if obj.rect.y >= (self.field_size[1]) * obj.rect.height:
+    #         obj.rect.y += -obj.rect.height * (1 + self.field_size[1])
+
+    # позиционировать камеру на объекте target
+    def update(self, target):
+        self.dx = -(target.rect.x + target.rect.w // 2 - WIDTH // 2)
+        self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
 
 
 start_screen()
 level = load_level("level_1.txt")
 player, level_x, level_y = generate_level(level)
-# camera = Camera((level_x, level_y))
+camera = Camera((level_x, level_y))
 pygame.display.set_caption('Dark Lifes')
 running = True
 
@@ -190,21 +225,21 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT and player.rect.x >= tile_width:
+            if event.key == pygame.K_LEFT and player.rect.x >= tile_width + LEFT_IND:
                 player.rect.x -= STEP
-            if event.key == pygame.K_RIGHT and player.rect.x <= tile_width * (len(level[0]) - 2):
+            if event.key == pygame.K_RIGHT and player.rect.x <= tile_width * (len(level[0]) - 2) + LEFT_IND:
                 player.rect.x += STEP
-            if event.key == pygame.K_UP and player.rect.y >= tile_height - player.rect.y // 2:
+            if event.key == pygame.K_UP and player.rect.y >= tile_height - player.rect.y // 2 + TOP_IND:
                 player.rect.y -= STEP
-            if event.key == pygame.K_DOWN and player.rect.y <= tile_height * (len(level) - 2):
+            if event.key == pygame.K_DOWN and player.rect.y <= tile_height * (len(level) - 2) + TOP_IND // 2:
                 player.rect.y += STEP
 
-    # camera.update(player)
+    camera.update(player)
 
-    # for sprite in all_sprites:
-    # camera.apply(sprite)
+    for sprite in all_sprites:
+        camera.apply(sprite)
 
-    screen.fill(pygame.Color(0, 0, 0))
+    screen.fill(pygame.Color(181, 83, 83))
     tiles_group.draw(screen)
     player_group.draw(screen)
     enemies_group.draw(screen)
