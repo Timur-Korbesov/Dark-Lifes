@@ -5,8 +5,8 @@ import pygame
 pygame.init()
 pygame.key.set_repeat(200, 70)
 
-FPS = 50
-WIDTH = 800
+FPS = 100
+WIDTH = 600
 HEIGHT = 600
 STEP = 10
 
@@ -94,6 +94,7 @@ def start_screen():
     screen.blit(fon, (0, 0))
     font = pygame.font.Font(None, 30)
     text_coord = 50
+    pygame.display.set_caption('Dark Lifes')
     for line in intro_text:
         string_rendered = font.render(line, 1, pygame.Color('black'))
         intro_rect = string_rendered.get_rect()
@@ -177,10 +178,10 @@ class Enemie_Goblin(pygame.sprite.Sprite):
 
 
 start_screen()
-
-player, level_x, level_y = generate_level(load_level("level_1.txt"))
+level = load_level("level_1.txt")
+player, level_x, level_y = generate_level(level)
 # camera = Camera((level_x, level_y))
-pygame.display.set_caption('Перемещение героя. Новый уровень')
+pygame.display.set_caption('Dark Lifes')
 running = True
 
 while running:
@@ -189,13 +190,13 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
+            if event.key == pygame.K_LEFT and player.rect.x >= tile_width:
                 player.rect.x -= STEP
-            if event.key == pygame.K_RIGHT:
+            if event.key == pygame.K_RIGHT and player.rect.x <= tile_width * (len(level[0]) - 2):
                 player.rect.x += STEP
-            if event.key == pygame.K_UP:
+            if event.key == pygame.K_UP and player.rect.y >= tile_height - player.rect.y // 2:
                 player.rect.y -= STEP
-            if event.key == pygame.K_DOWN:
+            if event.key == pygame.K_DOWN and player.rect.y <= tile_height * (len(level) - 2):
                 player.rect.y += STEP
 
     # camera.update(player)
