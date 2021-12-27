@@ -196,6 +196,8 @@ class Tile(pygame.sprite.Sprite):
             list_bottom.append(rect)
         if tile_type == "wall_right":
             list_right.append(rect)
+        if tile_type == "wall_top_inner_right_2":
+            list_right.append(rect)
 
 
 class Player(pygame.sprite.Sprite):
@@ -265,7 +267,7 @@ while running:
                     player.rect.x -= STEP
             if event.key == pygame.K_RIGHT:
                 for r in list_right:
-                    if not player.rect.collidepoint(r.bottomleft):
+                    if not player.rect.collidepoint(r.bottomleft) and not player.rect.collidepoint(0, r.left) and not player.rect.collidepoint(r.topleft):
                         pass
                     else:
                         break
