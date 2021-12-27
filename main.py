@@ -9,7 +9,7 @@ pygame.key.set_repeat(200, 70)
 FPS = 100
 WIDTH = 700
 HEIGHT = 650
-STEP = 10
+STEP = 30
 LEFT_IND = 50
 TOP_IND = 50
 
@@ -135,6 +135,11 @@ def start_screen():
         clock.tick(FPS)
 
 
+list_top = []
+list_left = []
+list_bottom = []
+list_right = []
+
 tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
                'wall_left': load_image('tiles/wall/wall_top_left.png', 60, 60),
                'wall_right': load_image('tiles/wall/wall_top_right.png', 60, 60),
@@ -166,6 +171,17 @@ class Tile(pygame.sprite.Sprite):
         super().__init__(tiles_group, all_sprites)
         self.image = tile_images[tile_type]
         self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x, TOP_IND + tile_height * pos_y)
+        self.proverka(tile_type, self.rect)
+
+    def proverka(self, tile_type, rect):
+        if tile_type in ["wall_1", "wall_2", "wall_3", "wall_crack"]:
+            list_top.append(rect)
+        if tile_type == "wall_left":
+            list_left.append(rect)
+        if tile_type == "wall_bottom":
+            list_bottom.append(rect)
+        if tile_type == "wall_right":
+            list_right.append(rect)
 
 
 class Player(pygame.sprite.Sprite):
@@ -226,13 +242,37 @@ while running:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT and player.rect.x >= tile_width + LEFT_IND:
-                player.rect.x -= STEP
+                for lt in list_left:
+                    if not player.rect.collidepoint(lt.bottomright):
+                        pass
+                    else:
+                        break
+                else:
+                    player.rect.x -= STEP
             if event.key == pygame.K_RIGHT and player.rect.x <= tile_width * (len(level[0]) - 2) + LEFT_IND:
-                player.rect.x += STEP
+                for r in list_right:
+                    if not player.rect.collidepoint(r.bottomleft):
+                        pass
+                    else:
+                        break
+                else:
+                    player.rect.x += STEP
             if event.key == pygame.K_UP and player.rect.y >= tile_height - player.rect.y // 2 + TOP_IND:
-                player.rect.y -= STEP
+                for h in list_top:
+                    if not player.rect.collidepoint(h.center):
+                        pass
+                    else:
+                        break
+                else:
+                    player.rect.y -= STEP
             if event.key == pygame.K_DOWN and player.rect.y <= tile_height * (len(level) - 2) + TOP_IND // 2:
-                player.rect.y += STEP
+                for b in list_bottom:
+                    if not player.rect.collidepoint(b.top + 30, b.left):
+                        pass
+                    else:
+                        break
+                else:
+                    player.rect.y += STEP
 
     camera.update(player)
 
