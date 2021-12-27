@@ -48,11 +48,8 @@ def load_level(filename):
     with open(filename, 'r') as mapFile:
         level_map = [line.strip() for line in mapFile]
 
-    # и подсчитываем максимальную длину
-    max_width = max(map(len, level_map))
-
     # дополняем каждую строку пустыми клетками ('.')
-    return list(map(lambda x: x.ljust(max_width, '.'), level_map))
+    return level_map
 
 
 def generate_level(level):
@@ -62,14 +59,13 @@ def generate_level(level):
             # Floors
             if level[y][x] == '.':
                 Tile('floor1', x, y)
-            if level[y][x] == ',':
+            elif level[y][x] == ',':
                 Tile('floor2', x, y)
             # Walls
-            elif level[y][x] == '#':
-                Tile('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
-                Tile('wall_top', x, y - 1)
-            elif level[y][x] == '+':
-                Tile('wall_bottom', x, y - 1)
+
+            # Doors
+            elif level[y][x] == '*':
+                Tile('spikes', x, y)
 
             elif level[y][x] == '[':
                 Tile('wall_left', x, y - 1)
@@ -77,6 +73,7 @@ def generate_level(level):
                 Tile('wall_right', x, y - 1)
 
             elif level[y][x] == '{':
+                print(level[y-1][x])
                 Tile('wall_side_left_top', x, y - 1)
             elif level[y][x] == '}':
                 Tile('wall_side_right_top', x, y - 1)
@@ -85,9 +82,19 @@ def generate_level(level):
                 Tile('wall_side_left_bottom', x, y - 1)
             elif level[y][x] == ')':
                 Tile('wall_side_right_bottom', x, y - 1)
-            # Doors
-            elif level[y][x] == '*':
-                Tile('door', x, y - 1)
+
+            elif level[y][x] == '<':
+                Tile('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
+                Tile('wall_top_inner_right_2', x, y - 1)
+            elif level[y][x] == '>':
+                Tile('wall_bottom_left', x, y - 1)
+
+            elif level[y][x] == '#':
+                Tile('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
+                Tile('wall_top', x, y - 1)
+
+            elif level[y][x] == '+':
+                Tile('wall_bottom', x, y - 1)
             # Hero
             elif level[y][x] == '@':
                 Tile('floor1', x, y)
@@ -145,10 +152,15 @@ tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
                'wall_right': load_image('tiles/wall/wall_top_right.png', 60, 60),
                'wall_bottom': load_image('tiles/wall/wall_bottom.png', 60, 60),
 
+               'wall_bottom_left': load_image('tiles/wall/wall_bottom_left.png', 60, 60),
+
                'wall_side_left_top': load_image('tiles/wall/wall_top_inner_left.png', 60, 60),
                'wall_side_right_top': load_image('tiles/wall/wall_top_inner_right.png', 60, 60),
                'wall_side_left_bottom': load_image('tiles/wall/wall_bottom_inner_left.png', 60, 60),
                'wall_side_right_bottom': load_image('tiles/wall/wall_bottom_inner_right.png', 60, 60),
+
+               'wall_top_inner_right_2': load_image('tiles/wall/wall_top_inner_right_2.png', 60, 60),
+
 
                'wall_1': load_image('tiles/wall/wall_1.png', 60, 60),
                'wall_2': load_image('tiles/wall/wall_2.png', 60, 60),
@@ -157,6 +169,8 @@ tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
 
                'floor1': load_image('tiles/floor/floor_1.png', 60, 60),
                'floor2': load_image('tiles/floor/floor_9.png', 60, 60),
+
+               'spikes': load_image('tiles/floor/spikes_anim_f9.png', 60, 60),
                'door': load_image('tiles/wall/door_anim_opening_f0.png', 60, 60)}
 
 player_image = load_image('heroes/knight/knight_idle_anim_f0.png', 60, 60)
@@ -208,13 +222,14 @@ class Camera:
     # сдвинуть объект obj на смещение камеры
     def apply(self, obj):
         obj.rect.x += self.dx
-    #     # вычислим координату клитки, если она уехала влево за границу экрана
-    #     if obj.rect.x < -obj.rect.width:
-    #         obj.rect.x += (self.field_size[0] + 1) * obj.rect.width
-    #     # вычислим координату клитки, если она уехала вправо за границу экрана
-    #     if obj.rect.x >= (self.field_size[0]) * obj.rect.width:
-    #         obj.rect.x += -obj.rect.width * (1 + self.field_size[0])
+        #     # вычислим координату клитки, если она уехала влево за границу экрана
+        #     if obj.rect.x < -obj.rect.width:
+        #         obj.rect.x += (self.field_size[0] + 1) * obj.rect.width
+        #     # вычислим координату клитки, если она уехала вправо за границу экрана
+        #     if obj.rect.x >= (self.field_size[0]) * obj.rect.width:
+        #         obj.rect.x += -obj.rect.width * (1 + self.field_size[0])
         obj.rect.y += self.dy
+
     #     # вычислим координату клитки, если она уехала вверх за границу экрана
     #     if obj.rect.y < -obj.rect.height:
     #         obj.rect.y += (self.field_size[1] + 1) * obj.rect.height
@@ -234,14 +249,13 @@ player, level_x, level_y = generate_level(level)
 camera = Camera((level_x, level_y))
 pygame.display.set_caption('Dark Lifes')
 running = True
-
 while running:
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT and player.rect.x >= tile_width + LEFT_IND:
+            if event.key == pygame.K_LEFT:
                 for lt in list_left:
                     if not player.rect.collidepoint(lt.bottomright):
                         pass
@@ -249,7 +263,7 @@ while running:
                         break
                 else:
                     player.rect.x -= STEP
-            if event.key == pygame.K_RIGHT and player.rect.x <= tile_width * (len(level[0]) - 2) + LEFT_IND:
+            if event.key == pygame.K_RIGHT:
                 for r in list_right:
                     if not player.rect.collidepoint(r.bottomleft):
                         pass
@@ -257,7 +271,7 @@ while running:
                         break
                 else:
                     player.rect.x += STEP
-            if event.key == pygame.K_UP and player.rect.y >= tile_height - player.rect.y // 2 + TOP_IND:
+            if event.key == pygame.K_UP:
                 for h in list_top:
                     if not player.rect.collidepoint(h.center):
                         pass
@@ -265,7 +279,7 @@ while running:
                         break
                 else:
                     player.rect.y -= STEP
-            if event.key == pygame.K_DOWN and player.rect.y <= tile_height * (len(level) - 2) + TOP_IND // 2:
+            if event.key == pygame.K_DOWN:
                 for b in list_bottom:
                     if not player.rect.collidepoint(b.top + 30, b.left):
                         pass
