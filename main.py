@@ -263,33 +263,25 @@ while running:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
                 for lt in list_left:
-                    if not player.rect.collidepoint(lt.bottomright):
-                        pass
-                    else:
+                    if player.rect.collidepoint(lt.bottomright):
                         break
                 else:
                     player.rect.x -= STEP
             if event.key == pygame.K_RIGHT:
                 for r in list_right:
-                    if not player.rect.collidepoint(r.bottomleft) and not player.rect.collidepoint(0, r.left) and not player.rect.collidepoint(r.topleft):
-                        pass
-                    else:
+                    if player.rect.collidepoint(r.bottomleft) or player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
                         break
                 else:
                     player.rect.x += STEP
             if event.key == pygame.K_UP:
                 for h in list_top:
-                    if not player.rect.collidepoint(h.center):
-                        pass
-                    else:
+                    if player.rect.collidepoint(h.center[0], h.center[1] + 10):
                         break
                 else:
                     player.rect.y -= STEP
             if event.key == pygame.K_DOWN:
                 for b in list_bottom:
-                    if not player.rect.collidepoint(b.top + 30, b.left):
-                        pass
-                    else:
+                    if player.rect.collidepoint(b.top + 30, b.left):
                         break
                 else:
                     player.rect.y += STEP
