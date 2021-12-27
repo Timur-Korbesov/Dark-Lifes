@@ -68,12 +68,11 @@ def generate_level(level):
                 Tile('spikes', x, y)
 
             elif level[y][x] == '[':
-                Tile('wall_left', x, y - 1)
+                Wall('wall_left', x, y - 1)
             elif level[y][x] == ']':
-                Tile('wall_right', x, y - 1)
+                Wall('wall_right', x, y - 1)
 
             elif level[y][x] == '{':
-                print(level[y-1][x])
                 Tile('wall_side_left_top', x, y - 1)
             elif level[y][x] == '}':
                 Tile('wall_side_right_top', x, y - 1)
@@ -84,17 +83,17 @@ def generate_level(level):
                 Tile('wall_side_right_bottom', x, y - 1)
 
             elif level[y][x] == '<':
-                Tile('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
-                Tile('wall_top_inner_right_2', x, y - 1)
+                Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
+                Wall('wall_top_inner_right_2', x, y - 1)
             elif level[y][x] == '>':
-                Tile('wall_bottom_left', x, y - 1)
+                Wall('wall_bottom_left', x, y - 1)
 
             elif level[y][x] == '#':
-                Tile('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
-                Tile('wall_top', x, y - 1)
+                Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
+                Wall('wall_top', x, y - 1)
 
             elif level[y][x] == '+':
-                Tile('wall_bottom', x, y - 1)
+                Wall('wall_bottom', x, y - 1)
             # Hero
             elif level[y][x] == '@':
                 Tile('floor1', x, y)
@@ -185,6 +184,11 @@ class Tile(pygame.sprite.Sprite):
         super().__init__(tiles_group, all_sprites)
         self.image = tile_images[tile_type]
         self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x, TOP_IND + tile_height * pos_y)
+
+
+class Wall(Tile):
+    def __init__(self, tile_type, pos_x, pos_y):
+        super().__init__(tile_type, pos_x, pos_y)
         self.proverka(tile_type, self.rect)
 
     def proverka(self, tile_type, rect):
@@ -192,7 +196,7 @@ class Tile(pygame.sprite.Sprite):
             list_top.append(rect)
         if tile_type == "wall_left":
             list_left.append(rect)
-        if tile_type == "wall_bottom":
+        if tile_type == "wall_bottom" or tile_type == "wall_bottom_left":
             list_bottom.append(rect)
         if tile_type == "wall_right":
             list_right.append(rect)
