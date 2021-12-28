@@ -160,7 +160,6 @@ tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
 
                'wall_top_inner_right_2': load_image('tiles/wall/wall_top_inner_right_2.png', 60, 60),
 
-
                'wall_1': load_image('tiles/wall/wall_1.png', 60, 60),
                'wall_2': load_image('tiles/wall/wall_2.png', 60, 60),
                'wall_3': load_image('tiles/wall/wall_3.png', 60, 60),
@@ -192,14 +191,19 @@ class Wall(Tile):
         self.proverka(tile_type, self.rect)
 
     def proverka(self, tile_type, rect):
+
         if tile_type in ["wall_1", "wall_2", "wall_3", "wall_crack"]:
             list_top.append(rect)
+
         if tile_type == "wall_left":
             list_left.append(rect)
+
         if tile_type == "wall_bottom" or tile_type == "wall_bottom_left":
             list_bottom.append(rect)
+
         if tile_type == "wall_right":
             list_right.append(rect)
+
         if tile_type == "wall_top_inner_right_2":
             list_right.append(rect)
 
@@ -269,10 +273,14 @@ while running:
                     player.rect.x -= STEP
             if event.key == pygame.K_RIGHT:
                 for r in list_right:
-                    if player.rect.collidepoint(r.bottomleft) or player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
+                    if player.rect.colliderect(r):
                         break
                 else:
                     player.rect.x += STEP
+                    if not list_top[10].collidepoint(player.rect.center):
+                        pass
+                    else:
+                        player.rect.x -= STEP
             if event.key == pygame.K_UP:
                 for h in list_top:
                     if player.rect.collidepoint(h.center[0], h.center[1] + 10):
