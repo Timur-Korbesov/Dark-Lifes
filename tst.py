@@ -1,5 +1,7 @@
 import os
 import sys
+import time
+
 import pygame
 import random
 
@@ -332,8 +334,8 @@ start_screen()
 level = load_level("level_1.txt")
 player, goblins, level_x, level_y = generate_level(level)
 sword_for_player = Weapon('Меч', 10, 100)
-sword_for_enemy = Weapon('Меч', 2, 100)
 player.add_weapon(sword_for_player)
+sword_for_enemy = Weapon('Меч', 2, 100)
 goblins.add_weapon(sword_for_enemy)
 camera = Camera((level_x, level_y))
 pygame.display.set_caption('Dark Lifes')
@@ -380,12 +382,13 @@ while running:
                 for enemie in enemies_group:
                     player.hit(enemie)
     for enemie in enemies_group:
-        enemie.hit(player)
+        goblins.hit(player)
         if not player.is_alive():
             player.hp = 100
             player = Player(5, 5)
             player.hp = 100
             player.add_weapon(sword_for_player)
+        time.sleep(0.05)
 
     camera.update(player)
 
