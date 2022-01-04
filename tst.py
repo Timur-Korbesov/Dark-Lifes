@@ -209,6 +209,8 @@ class Wall(Tile):
             list_left.append(rect)
         if tile_type == "wall_bottom" or tile_type == "wall_bottom_left":
             list_bottom.append(rect)
+        if tile_type == "wall_bottom_left":
+            list_right.append(rect)
         if tile_type == "wall_right":
             list_right.append(rect)
         if tile_type == "wall_top_inner_right_2":
@@ -340,6 +342,8 @@ goblins.add_weapon(sword_for_enemy)
 camera = Camera((level_x, level_y))
 pygame.display.set_caption('Dark Lifes')
 running = True
+MYEVENTTYPE = pygame.USEREVENT + 1
+pygame.time.set_timer(MYEVENTTYPE, 100)
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -353,17 +357,21 @@ while running:
                 else:
                     player.rect.x -= STEP
             if event.key == pygame.K_RIGHT:
+                player.rect.x += STEP
                 player.image = player_image_right
                 for r in list_right:
-                    if list_right[0] == r:
-                        if player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
-                            break
+                    if r.collidepoint(player.rect.centerx, player.rect.centery - 8) and r == list_right[4]:
+                        player.rect.x -= STEP
+                        break
+                    elif r == list_right[-1] and (player.rect.collidepoint(r.bottomleft) or player.rect.collidepoint(r.topleft)):
+                        player.rect.x -= STEP
+                        break
                     else:
-                        if player.rect.collidepoint(r.bottomleft) or \
-                                player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
+                        if r.collidepoint(player.rect.center) and r != list_right[-1] and r != list_right[4]:
+                            player.rect.x -= STEP
                             break
                 else:
-                    player.rect.x += STEP
+                    pass
             if event.key == pygame.K_UP:
                 for h in list_top:
                     if player.rect.collidepoint(h.center[0], h.center[1] + 10):
@@ -381,14 +389,15 @@ while running:
             if event.button == 1:
                 for enemie in enemies_group:
                     player.hit(enemie)
-    for enemie in enemies_group:
-        goblins.hit(player)
-        if not player.is_alive():
-            player.hp = 100
-            player = Player(5, 5)
-            player.hp = 100
-            player.add_weapon(sword_for_player)
-        time.sleep(0.05)
+        for enemie in enemies_group:
+            if event.type == MYEVENTTYPE:
+                goblins.hit(player)
+                print("JOB")
+                if not player.is_alive():
+                    player.hp = 100
+                    player = Player(5, 5)
+                    player.hp = 100
+                    player.add_weapon(sword_for_player)
 
     camera.update(player)
 
