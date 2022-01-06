@@ -12,6 +12,7 @@ FPS = 100
 WIDTH = 700
 HEIGHT = 650
 STEP = 30
+STEPEN = 10
 LEFT_IND = 50
 TOP_IND = 50
 
@@ -21,6 +22,7 @@ clock = pygame.time.Clock()
 player = None
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
+spikes_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 enemies_group = pygame.sprite.Group()
 all_enemies = []
@@ -182,6 +184,7 @@ tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
 
 player_image_right = load_image('heroes/knight/knight_idle_anim_f0.png', 60, 60)
 player_image_left = pygame.transform.flip(player_image_right, True, False)
+health_player = load_image('ui (new)/health_ui.png', 300, 60)
 
 enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png', 60, 60)}
 
@@ -209,12 +212,25 @@ class Wall(Tile):
             list_left.append(rect)
         if tile_type == "wall_bottom" or tile_type == "wall_bottom_left":
             list_bottom.append(rect)
-        if tile_type == "wall_bottom_left":
-            list_right.append(rect)
         if tile_type == "wall_right":
             list_right.append(rect)
         if tile_type == "wall_top_inner_right_2":
             list_right.append(rect)
+
+
+class Health_Player(pygame.sprite.Sprite):
+    def __init__(self, health):
+        super().__init__(tiles_group)
+        self.image = health
+        self.rect = self.image.get_rect().move(10, 10)
+
+
+Health_Player(health_player)
+
+
+class Spikes(Tile):
+    def __init__(self, tile_type, pos_x, pos_y):
+        super().__init__(tile_type, pos_x, pos_y)
 
 
 class Weapon:
@@ -335,15 +351,20 @@ class Camera:
 start_screen()
 level = load_level("level_1.txt")
 player, goblins, level_x, level_y = generate_level(level)
-sword_for_player = Weapon('Меч', 10, 100)
-player.add_weapon(sword_for_player)
-sword_for_enemy = Weapon('Меч', 2, 100)
-goblins.add_weapon(sword_for_enemy)
 camera = Camera((level_x, level_y))
 pygame.display.set_caption('Dark Lifes')
-running = True
+# Оружия
+sword_for_player = Weapon('Меч', 10, 100)
+player.add_weapon(sword_for_player)
+sword_for_enemy = Weapon('Меч', 4, 100)
+goblins.add_weapon(sword_for_enemy)
+# Таймеры
+ENEMIEGOEVENT = pygame.USEREVENT + 1
+pygame.time.set_timer(ENEMIEGOEVENT, 100)
 MYEVENTTYPE = pygame.USEREVENT + 1
-pygame.time.set_timer(MYEVENTTYPE, 100)
+pygame.time.set_timer(MYEVENTTYPE, 450)
+
+running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -357,21 +378,17 @@ while running:
                 else:
                     player.rect.x -= STEP
             if event.key == pygame.K_RIGHT:
-                player.rect.x += STEP
                 player.image = player_image_right
                 for r in list_right:
-                    if r.collidepoint(player.rect.centerx, player.rect.centery - 8) and r == list_right[4]:
-                        player.rect.x -= STEP
-                        break
-                    elif r == list_right[-1] and (player.rect.collidepoint(r.bottomleft) or player.rect.collidepoint(r.topleft)):
-                        player.rect.x -= STEP
-                        break
+                    if list_right[0] == r:
+                        if player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
+                            break
                     else:
-                        if r.collidepoint(player.rect.center) and r != list_right[-1] and r != list_right[4]:
-                            player.rect.x -= STEP
+                        if player.rect.collidepoint(r.bottomleft) or \
+                                player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
                             break
                 else:
-                    pass
+                    player.rect.x += STEP
             if event.key == pygame.K_UP:
                 for h in list_top:
                     if player.rect.collidepoint(h.center[0], h.center[1] + 10):
@@ -390,6 +407,22 @@ while running:
                 for enemie in enemies_group:
                     player.hit(enemie)
         for enemie in enemies_group:
+            if event.type == ENEMIEGOEVENT:
+                player_x, player_y = player.rect.x, player.rect.y
+                enemie_x, enemie_y = enemie.rect.x, enemie.rect.y
+                ans = pygame.sprite.spritecollide(enemie, enemies_group, False)
+                if len(ans) == 1:
+                    if player_x + STEPEN * 2 - 10 >= enemie_x:
+                        enemie.rect.x += STEPEN
+                    if player_y + STEPEN * 2 - 10 >= enemie_y:
+                        enemie.rect.y += STEPEN
+                    if player_x + STEPEN * 2 - 10 <= enemie_x:
+                        enemie.rect.x -= STEPEN
+                    if player_y + STEPEN * 2 - 10 <= enemie_y:
+                        enemie.rect.y -= STEPEN
+                else:
+                    enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN*2, STEPEN*2])
+                    enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN*2, STEPEN*2])
             if event.type == MYEVENTTYPE:
                 goblins.hit(player)
                 print("JOB")
