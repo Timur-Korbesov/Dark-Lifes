@@ -2,6 +2,7 @@ import os
 import sys
 import random
 import pygame
+import mortoray_path_finding as mpf
 
 # Изображение не получится загрузить
 # без предварительной инициализации pygame

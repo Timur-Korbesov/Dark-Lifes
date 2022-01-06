@@ -1,5 +1,7 @@
 import os
 import sys
+import time
+
 import pygame
 import random
 
@@ -10,6 +12,7 @@ FPS = 100
 WIDTH = 700
 HEIGHT = 650
 STEP = 30
+STEPEN = 10
 LEFT_IND = 50
 TOP_IND = 50
 
@@ -19,8 +22,10 @@ clock = pygame.time.Clock()
 player = None
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
+spikes_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 enemies_group = pygame.sprite.Group()
+all_enemies = []
 
 
 def load_image(name, width=None, height=None, colorkey=None):
@@ -58,9 +63,7 @@ def generate_level(level):
         for x in range(len(level[y])):
             # Floors
             if level[y][x] == '.':
-                Tile('floor1', x, y)
-            elif level[y][x] == ',':
-                Tile('floor2', x, y)
+                Tile('floor_' + str(random.choice([1, 1, 1, 2, 3, 4, 9])), x, y)
             # Walls
 
             # Doors
@@ -96,14 +99,15 @@ def generate_level(level):
                 Wall('wall_bottom', x, y - 1)
             # Hero
             elif level[y][x] == '@':
-                Tile('floor1', x, y)
+                Tile('floor_1', x, y)
                 new_player = Player(x, y)
             # Enemies
             elif level[y][x] == '!':
-                Tile('floor1', x, y)
-                Enemie_Goblin('enemie_goblin', x, y)
+                Tile('floor_1', x, y)
+                new_enemie_goblin = BaseEnemy('enemie_goblin', x, y)
+
     # вернем игрока, а также размер поля в клетках
-    return new_player, x, y
+    return new_player, new_enemie_goblin, x, y
 
 
 def terminate():
@@ -165,13 +169,21 @@ tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
                'wall_3': load_image('tiles/wall/wall_3.png', 60, 60),
                'wall_crack': load_image('tiles/wall/wall_crack.png', 60, 60),
 
-               'floor1': load_image('tiles/floor/floor_1.png', 60, 60),
-               'floor2': load_image('tiles/floor/floor_9.png', 60, 60),
+               'floor_1': load_image('tiles/floor/floor_1.png', 60, 60),
+               'floor_2': load_image('tiles/floor/floor_2.png', 60, 60),
+               'floor_3': load_image('tiles/floor/floor_3.png', 60, 60),
+               'floor_4': load_image('tiles/floor/floor_4.png', 60, 60),
+               'floor_5': load_image('tiles/floor/floor_5.png', 60, 60),
+               'floor_6': load_image('tiles/floor/floor_6.png', 60, 60),
+               'floor_7': load_image('tiles/floor/floor_7.png', 60, 60),
+               'floor_8': load_image('tiles/floor/floor_8.png', 60, 60),
+               'floor_9': load_image('tiles/floor/floor_9.png', 60, 60),
 
                'spikes': load_image('tiles/floor/spikes_anim_f9.png', 60, 60),
                'door': load_image('tiles/wall/door_anim_opening_f0.png', 60, 60)}
 
-player_image = load_image('heroes/knight/knight_idle_anim_f0.png', 60, 60)
+player_image_right = load_image('heroes/knight/knight_idle_anim_f0.png', 60, 60)
+player_image_left = pygame.transform.flip(player_image_right, True, False)
 
 enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png', 60, 60)}
 
@@ -191,35 +203,120 @@ class Wall(Tile):
         self.proverka(tile_type, self.rect)
 
     def proverka(self, tile_type, rect):
-
         if tile_type in ["wall_1", "wall_2", "wall_3", "wall_crack"]:
             list_top.append(rect)
-
+            if len(list_top) == 11:
+                list_right.append(rect)
         if tile_type == "wall_left":
             list_left.append(rect)
-
         if tile_type == "wall_bottom" or tile_type == "wall_bottom_left":
             list_bottom.append(rect)
-
         if tile_type == "wall_right":
             list_right.append(rect)
-
         if tile_type == "wall_top_inner_right_2":
             list_right.append(rect)
+
+
+class Spikes(Tile):
+    def __init__(self, tile_type, pos_x, pos_y):
+        super().__init__(tile_type, pos_x, pos_y)
+
+
+class Weapon:
+    def __init__(self, name, damage, range):
+        self.name = name
+        self.damage = damage
+        self.range = range
+
+    def hit(self, actor, target):
+        if (self.range ** 2 >= (target.rect.x - actor.rect.x) ** 2 +
+                (target.rect.y - actor.rect.y) ** 2):
+            if isinstance(target, BaseEnemy):
+                print(f'Врагу нанесен урон оружием {self.name} в размере {self.damage}')
+            else:
+                print(f'Вам нанесен урон оружием {self.name} в размере {self.damage}')
+            target.hp -= self.damage
+            if not target.is_alive():
+                if isinstance(target, BaseEnemy):
+                    target.kill()
+                else:
+                    target.kill()
+            print(target.hp)
+        else:
+            print(f'Враг слишком далеко для оружия {self.name}')
+
+    def __str__(self):
+        return self.name
 
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, all_sprites)
-        self.image = player_image
-        self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x + 15, TOP_IND + tile_height * pos_y + 5)
+        self.image = player_image_right
+        self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x + 16, TOP_IND + tile_height * pos_y + 5)
+        self.hp = 100
+        self.player_weapons = []
+        self.eqip_weapon = 0
+
+    def hit(self, target):
+        self.player_weapons[self.eqip_weapon].hit(self, target)
+
+    def add_weapon(self, weapon):
+        if isinstance(weapon, Weapon):
+            self.player_weapons.append(weapon)
+            print('Подобрал', weapon)
+        else:
+            print('Это не оружие')
+
+    def next_weapon(self):
+        if len(self.player_weapons) == 0:
+            print('Я безоружен')
+        elif len(self.player_weapons) == 1:
+            print('У меня только одно оружие')
+        else:
+            self.eqip_weapon += 1
+            if self.eqip_weapon == len(self.player_weapons):
+                self.eqip_weapon = 0
+            print(f'Сменил оружие на {self.player_weapons[self.eqip_weapon]}')
+
+    def is_alive(self):
+        return self.hp > 0
+
+    def get_damage(self, amount):
+        if self.is_alive():
+            self.hp -= amount
 
 
-class Enemie_Goblin(pygame.sprite.Sprite):
+class BaseEnemy(pygame.sprite.Sprite):
     def __init__(self, name_enemie, pos_x, pos_y):
         super().__init__(enemies_group, all_sprites)
         self.image = enemies[name_enemie]
         self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x + 15, TOP_IND + tile_height * pos_y + 5)
+        self.goblin_weapons = []
+        self.eqip_weapon = 0
+        self.hp = 30
+
+    def is_alive(self):
+        return self.hp > 0
+
+    def get_damage(self, amount):
+        if self.is_alive():
+            self.hp -= amount
+
+    def add_weapon(self, weapon):
+        if isinstance(weapon, Weapon):
+            self.goblin_weapons.append(weapon)
+            print('Подобрал', weapon, "(гоблин)")
+        else:
+            print('Это не оружие')
+
+    def hit(self, target):
+        self.goblin_weapons[self.eqip_weapon].hit(self, target)
+
+
+class Enemie_Goblin(BaseEnemy):
+    def __init__(self, name_enemie, pos_x, pos_y):
+        super().__init__(name_enemie, pos_x, pos_y)
 
 
 class Camera:
@@ -232,20 +329,7 @@ class Camera:
     # сдвинуть объект obj на смещение камеры
     def apply(self, obj):
         obj.rect.x += self.dx
-        #     # вычислим координату клитки, если она уехала влево за границу экрана
-        #     if obj.rect.x < -obj.rect.width:
-        #         obj.rect.x += (self.field_size[0] + 1) * obj.rect.width
-        #     # вычислим координату клитки, если она уехала вправо за границу экрана
-        #     if obj.rect.x >= (self.field_size[0]) * obj.rect.width:
-        #         obj.rect.x += -obj.rect.width * (1 + self.field_size[0])
         obj.rect.y += self.dy
-
-    #     # вычислим координату клитки, если она уехала вверх за границу экрана
-    #     if obj.rect.y < -obj.rect.height:
-    #         obj.rect.y += (self.field_size[1] + 1) * obj.rect.height
-    #     # вычислим координату клитки, если она уехала вниз за границу экрана
-    #     if obj.rect.y >= (self.field_size[1]) * obj.rect.height:
-    #         obj.rect.y += -obj.rect.height * (1 + self.field_size[1])
 
     # позиционировать камеру на объекте target
     def update(self, target):
@@ -255,32 +339,45 @@ class Camera:
 
 start_screen()
 level = load_level("level_1.txt")
-player, level_x, level_y = generate_level(level)
+player, goblins, level_x, level_y = generate_level(level)
 camera = Camera((level_x, level_y))
 pygame.display.set_caption('Dark Lifes')
+# Оружия
+sword_for_player = Weapon('Меч', 10, 100)
+player.add_weapon(sword_for_player)
+sword_for_enemy = Weapon('Меч', 4, 100)
+goblins.add_weapon(sword_for_enemy)
+# Таймеры
+ENEMIEGOEVENT = pygame.USEREVENT + 1
+pygame.time.set_timer(ENEMIEGOEVENT, 100)
+MYEVENTTYPE = pygame.USEREVENT + 1
+pygame.time.set_timer(MYEVENTTYPE, 450)
+
 running = True
 while running:
-
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
+                player.image = player_image_left
                 for lt in list_left:
                     if player.rect.collidepoint(lt.bottomright):
                         break
                 else:
                     player.rect.x -= STEP
             if event.key == pygame.K_RIGHT:
+                player.image = player_image_right
                 for r in list_right:
-                    if player.rect.colliderect(r):
-                        break
+                    if list_right[0] == r:
+                        if player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
+                            break
+                    else:
+                        if player.rect.collidepoint(r.bottomleft) or \
+                                player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
+                            break
                 else:
                     player.rect.x += STEP
-                    if not list_top[10].collidepoint(player.rect.center):
-                        pass
-                    else:
-                        player.rect.x -= STEP
             if event.key == pygame.K_UP:
                 for h in list_top:
                     if player.rect.collidepoint(h.center[0], h.center[1] + 10):
@@ -294,6 +391,36 @@ while running:
                 else:
                     player.rect.y += STEP
 
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                for enemie in enemies_group:
+                    player.hit(enemie)
+        for enemie in enemies_group:
+            if event.type == ENEMIEGOEVENT:
+                player_x, player_y = player.rect.x, player.rect.y
+                enemie_x, enemie_y = enemie.rect.x, enemie.rect.y
+                ans = pygame.sprite.spritecollide(enemie, enemies_group, False)
+                if len(ans) == 1:
+                    if player_x + STEPEN * 2 - 10 >= enemie_x:
+                        enemie.rect.x += STEPEN
+                    if player_y + STEPEN * 2 - 10 >= enemie_y:
+                        enemie.rect.y += STEPEN
+                    if player_x + STEPEN * 2 - 10 <= enemie_x:
+                        enemie.rect.x -= STEPEN
+                    if player_y + STEPEN * 2 - 10 <= enemie_y:
+                        enemie.rect.y -= STEPEN
+                else:
+                    enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN*2, STEPEN*2])
+                    enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN*2, STEPEN*2])
+            if event.type == MYEVENTTYPE:
+                goblins.hit(player)
+                print("JOB")
+                if not player.is_alive():
+                    player.hp = 100
+                    player = Player(5, 5)
+                    player.hp = 100
+                    player.add_weapon(sword_for_player)
+
     camera.update(player)
 
     for sprite in all_sprites:
@@ -301,9 +428,8 @@ while running:
 
     screen.fill(pygame.Color(181, 83, 83))
     tiles_group.draw(screen)
-    player_group.draw(screen)
     enemies_group.draw(screen)
-
+    player_group.draw(screen)
     pygame.display.flip()
 
     clock.tick(FPS)
