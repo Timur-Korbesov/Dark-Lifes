@@ -25,6 +25,7 @@ tiles_group = pygame.sprite.Group()
 spikes_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 enemies_group = pygame.sprite.Group()
+healths_group = pygame.sprite.Group()
 all_enemies = []
 
 
@@ -184,7 +185,7 @@ tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
 
 player_image_right = load_image('heroes/knight/knight_idle_anim_f0.png', 60, 60)
 player_image_left = pygame.transform.flip(player_image_right, True, False)
-health_player = load_image('ui (new)/health_ui.png', 300, 60)
+health_player = load_image('ui (new)/health_ui.png', 250, 50)
 
 enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png', 60, 60)}
 
@@ -220,7 +221,7 @@ class Wall(Tile):
 
 class Health_Player(pygame.sprite.Sprite):
     def __init__(self, health):
-        super().__init__(tiles_group)
+        super().__init__(tiles_group, healths_group)
         self.image = health
         self.rect = self.image.get_rect().move(10, 10)
 
@@ -441,6 +442,7 @@ while running:
     tiles_group.draw(screen)
     enemies_group.draw(screen)
     player_group.draw(screen)
+    healths_group.draw(screen)
     pygame.display.flip()
 
     clock.tick(FPS)
