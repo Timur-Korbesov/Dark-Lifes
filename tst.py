@@ -12,6 +12,7 @@ FPS = 100
 WIDTH = 700
 HEIGHT = 650
 STEP = 30
+STEPEN = 10
 LEFT_IND = 50
 TOP_IND = 50
 
@@ -21,6 +22,7 @@ clock = pygame.time.Clock()
 player = None
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
+spikes_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 enemies_group = pygame.sprite.Group()
 all_enemies = []
@@ -215,6 +217,11 @@ class Wall(Tile):
             list_right.append(rect)
 
 
+class Spikes(Tile):
+    def __init__(self, tile_type, pos_x, pos_y):
+        super().__init__(tile_type, pos_x, pos_y)
+
+
 class Weapon:
     def __init__(self, name, damage, range):
         self.name = name
@@ -333,14 +340,19 @@ class Camera:
 start_screen()
 level = load_level("level_1.txt")
 player, goblins, level_x, level_y = generate_level(level)
-sword_for_player = Weapon('Меч', 10, 100)
-player.add_weapon(sword_for_player)
-sword_for_enemy = Weapon('Меч', 2, 100)
-goblins.add_weapon(sword_for_enemy)
 camera = Camera((level_x, level_y))
 pygame.display.set_caption('Dark Lifes')
+# Оружия
+sword_for_player = Weapon('Меч', 10, 100)
+player.add_weapon(sword_for_player)
+sword_for_enemy = Weapon('Меч', 4, 100)
+goblins.add_weapon(sword_for_enemy)
+# Таймеры
+ENEMIEGOEVENT = pygame.USEREVENT + 1
+pygame.time.set_timer(ENEMIEGOEVENT, 100)
 MYEVENTTYPE = pygame.USEREVENT + 1
-pygame.time.set_timer(MYEVENTTYPE, 200)
+pygame.time.set_timer(MYEVENTTYPE, 450)
+
 running = True
 while running:
     for event in pygame.event.get():
@@ -384,23 +396,30 @@ while running:
                 for enemie in enemies_group:
                     player.hit(enemie)
         for enemie in enemies_group:
-            if event.type == MYEVENTTYPE:
+            if event.type == ENEMIEGOEVENT:
                 player_x, player_y = player.rect.x, player.rect.y
                 enemie_x, enemie_y = enemie.rect.x, enemie.rect.y
                 ans = pygame.sprite.spritecollide(enemie, enemies_group, False)
-                print(len(ans))
                 if len(ans) == 1:
-                    if player_x + STEP >= enemie_x:
-                        enemie.rect.x += STEP
-                    if player_y + STEP >= enemie_y:
-                        enemie.rect.y += STEP
-                    if player_x <= enemie_x + STEP:
-                        enemie.rect.x -= STEP
-                    if player_y <= enemie_y + STEP:
-                        enemie.rect.y -= STEP
+                    if player_x + STEPEN * 2 - 10 >= enemie_x:
+                        enemie.rect.x += STEPEN
+                    if player_y + STEPEN * 2 - 10 >= enemie_y:
+                        enemie.rect.y += STEPEN
+                    if player_x + STEPEN * 2 - 10 <= enemie_x:
+                        enemie.rect.x -= STEPEN
+                    if player_y + STEPEN * 2 - 10 <= enemie_y:
+                        enemie.rect.y -= STEPEN
                 else:
-                    enemie.rect.x += random.randint(-STEP, STEP, -STEP*2, STEP*2)
-                    enemie.rect.y += random.randint(-STEP, STEP)
+                    enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN*2, STEPEN*2])
+                    enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN*2, STEPEN*2])
+            if event.type == MYEVENTTYPE:
+                goblins.hit(player)
+                print("JOB")
+                if not player.is_alive():
+                    player.hp = 100
+                    player = Player(5, 5)
+                    player.hp = 100
+                    player.add_weapon(sword_for_player)
 
     camera.update(player)
 
