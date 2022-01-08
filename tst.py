@@ -59,7 +59,7 @@ def load_level(filename):
 
 
 def generate_level(level):
-    new_player, new_enemie_goblin, x, y = None, None, None, None
+    new_player, new_enemie_goblin, x, y = None, [], None, None
     for y in range(len(level)):
         for x in range(len(level[y])):
             # Floors
@@ -105,7 +105,7 @@ def generate_level(level):
             # Enemies
             elif level[y][x] == '!':
                 Tile('floor_1', x, y)
-                new_enemie_goblin = BaseEnemy('enemie_goblin', x, y)
+                new_enemie_goblin.append(Enemie_Goblin('enemie_goblin', x, y))
 
     # вернем игрока, а также размер поля в клетках
     return new_player, new_enemie_goblin, x, y
@@ -358,7 +358,9 @@ pygame.display.set_caption('Dark Lifes')
 sword_for_player = Weapon('Меч', 10, 100)
 player.add_weapon(sword_for_player)
 sword_for_enemy = Weapon('Меч', 4, 100)
-goblins.add_weapon(sword_for_enemy)
+for goblin in goblins:
+    goblin.add_weapon(sword_for_enemy)
+print(len(enemies_group))
 # Таймеры
 ENEMIEGOEVENT = pygame.USEREVENT + 1
 pygame.time.set_timer(ENEMIEGOEVENT, 100)
@@ -425,13 +427,13 @@ while running:
                     enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN*2, STEPEN*2])
                     enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN*2, STEPEN*2])
             if event.type == MYEVENTTYPE:
-                goblins.hit(player)
-                print("JOB")
-                if not player.is_alive():
-                    player.hp = 100
-                    player = Player(5, 5)
-                    player.hp = 100
-                    player.add_weapon(sword_for_player)
+                for goblin in goblins:
+                    goblin.hit(player)
+                    if not player.is_alive():
+                        player.hp = 100
+                        player = Player(5, 5)
+                        player.hp = 100
+                        player.add_weapon(sword_for_player)
 
     camera.update(player)
 
