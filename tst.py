@@ -185,7 +185,11 @@ tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
 
 player_image_right = load_image('heroes/knight/knight_idle_anim_f0.png', 60, 60)
 player_image_left = pygame.transform.flip(player_image_right, True, False)
-health_player = load_image('ui (new)/health_ui.png', 250, 50)
+health_player = {"health_1": load_image('ui (new)/health_ui.png', 250, 50),
+                 "health_2": load_image('ui (new)/health_ui_2.png', 250, 50),
+                 "health_3": load_image('ui (new)/health_ui_3.png', 250, 50),
+                 "health_4": load_image('ui (new)/health_ui_4.png', 250, 50),
+                 "health_5": load_image('ui (new)/health_ui_5.png', 250, 50)}
 
 enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png', 60, 60)}
 
@@ -220,13 +224,10 @@ class Wall(Tile):
 
 
 class Health_Player(pygame.sprite.Sprite):
-    def __init__(self, health):
+    def __init__(self, health_number):
         super().__init__(tiles_group, healths_group)
-        self.image = health
+        self.image = health_player[health_number]
         self.rect = self.image.get_rect().move(10, 10)
-
-
-Health_Player(health_player)
 
 
 class Spikes(Tile):
@@ -361,7 +362,7 @@ player.add_weapon(sword_for_player)
 sword_for_enemy = Weapon('Меч', 4, 100)
 for goblin in goblins:
     goblin.add_weapon(sword_for_enemy)
-print(len(enemies_group))
+healths = Health_Player("health_5")
 # Таймеры
 ENEMIEGOEVENT = pygame.USEREVENT + 1
 pygame.time.set_timer(ENEMIEGOEVENT, 100)
@@ -434,7 +435,19 @@ while running:
                         player.hp = 100
                         player = Player(5, 5)
                         player.hp = 100
+                        healths.kill()
+                        healths = Health_Player("health_5")
                         player.add_weapon(sword_for_player)
+                    else:
+                        if 50 < player.hp <= 75:
+                            healths.kill()
+                            healths = Health_Player("health_4")
+                        elif 25 < player.hp <= 50:
+                            healths.kill()
+                            healths = Health_Player("health_3")
+                        elif 0 < player.hp <= 25:
+                            healths.kill()
+                            healths = Health_Player("health_2")
 
     camera.update(player)
 
