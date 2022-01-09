@@ -326,6 +326,7 @@ class BaseEnemy(pygame.sprite.Sprite):
         self.goblin_weapons[self.eqip_weapon].hit(self, target)
 
 
+
 class Enemie_Goblin(BaseEnemy):
     def __init__(self, name_enemie, pos_x, pos_y):
         super().__init__(name_enemie, pos_x, pos_y)
