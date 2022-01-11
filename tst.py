@@ -263,8 +263,10 @@ class Weapon:
             target.hp -= self.damage
             if not target.is_alive():
                 if isinstance(target, BaseEnemy):
-                    x, y = target.rect.x, target.rect.y
-                    DropableObjects(random.choice(drop_objects), x, y)
+                    selection = random.choice(["-", "+", "-", "+", "-"])
+                    if selection == "+":
+                        x, y = target.rect.x, target.rect.y
+                        DropableObjects(random.choice(drop_objects), x, y)
                     target.kill()
                 else:
                     target.kill()
