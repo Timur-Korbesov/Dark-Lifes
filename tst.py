@@ -202,7 +202,7 @@ tile_width = tile_height = 60
 
 class DropableObjects(pygame.sprite.Sprite):
     def __init__(self, drop_ob, pos_x, pos_y):
-        super().__init__(dropable_group)
+        super().__init__(dropable_group, all_sprites)
         self.image = drop_ob
         self.rect = self.image.get_rect().move(pos_x, pos_y)
 
