@@ -15,6 +15,8 @@ STEP = 30
 STEPEN = 10
 LEFT_IND = 50
 TOP_IND = 50
+number_dungeon = 1
+number_location = 1
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
@@ -48,8 +50,8 @@ def load_image(name, width=None, height=None, colorkey=None):
     return image
 
 
-def load_level(filename):
-    filename = "data/" + filename
+def load_level(number_dungeon, number_location):
+    filename = "data/dungeons/dungeon_" + str(number_dungeon) + '/location_' + str(number_location) + '.txt'
     # читаем уровень, убирая символы перевода строки
     with open(filename, 'r') as mapFile:
         level_map = [line.strip() for line in mapFile]
@@ -91,6 +93,12 @@ def generate_level(level):
                 Wall('wall_top_inner_right_2', x, y - 1)
             elif level[y][x] == '>':
                 Wall('wall_bottom_left', x, y - 1)
+
+            elif level[y][x] == ';':
+                Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
+                Wall('wall_top_inner_left_2', x, y - 1)
+            elif level[y][x] == ':':
+                Wall('wall_bottom_right', x, y - 1)
 
             elif level[y][x] == '#':
                 Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
@@ -157,6 +165,7 @@ tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
                'wall_bottom': load_image('tiles/wall/wall_bottom.png', 60, 60),
 
                'wall_bottom_left': load_image('tiles/wall/wall_bottom_left.png', 60, 60),
+               'wall_bottom_right': load_image('tiles/wall/wall_bottom_right.png', 60, 60),
 
                'wall_side_left_top': load_image('tiles/wall/wall_top_inner_left.png', 60, 60),
                'wall_side_right_top': load_image('tiles/wall/wall_top_inner_right.png', 60, 60),
@@ -164,6 +173,7 @@ tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
                'wall_side_right_bottom': load_image('tiles/wall/wall_bottom_inner_right.png', 60, 60),
 
                'wall_top_inner_right_2': load_image('tiles/wall/wall_top_inner_right_2.png', 60, 60),
+               'wall_top_inner_left_2': load_image('tiles/wall/wall_top_inner_left_2.png', 60, 60),
 
                'wall_1': load_image('tiles/wall/wall_1.png', 60, 60),
                'wall_2': load_image('tiles/wall/wall_2.png', 60, 60),
@@ -358,7 +368,7 @@ class Camera:
 
 
 start_screen()
-level = load_level("level_1.txt")
+level = load_level(number_dungeon, number_location)
 player, goblins, level_x, level_y = generate_level(level)
 camera = Camera((level_x, level_y))
 pygame.display.set_caption('Dark Lifes')
@@ -433,8 +443,8 @@ while running:
                     if player_y + STEPEN * 2 - 10 <= enemie_y:
                         enemie.rect.y -= STEPEN
                 else:
-                    enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN*2, STEPEN*2])
-                    enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN*2, STEPEN*2])
+                    enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
+                    enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
             if event.type == MYEVENTTYPE:
                 for goblin in goblins:
                     goblin.hit(player)
@@ -464,6 +474,22 @@ while running:
                     list_left.remove(spike)
                 except:
                     pass
+            ans = pygame.sprite.spritecollide(player, spikes_group, False)
+            if len(ans) >= 4:
+                number_location += 1
+                if number_location > 10:
+                    number_dungeon += 1
+                now_player = player
+                for sprt in tiles_group:
+                    sprt.kill()
+                player.kill()
+                level = load_level(number_dungeon, number_location)
+                player, goblins, level_x, level_y = generate_level(level)
+                player = now_player
+                player.rect.x = 230
+                for goblin in goblins:
+                    goblin.add_weapon(sword_for_enemy)
+                camera = Camera((level_x, level_y))
 
     camera.update(player)
 
