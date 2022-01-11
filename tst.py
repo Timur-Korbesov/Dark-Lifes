@@ -26,6 +26,7 @@ spikes_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 enemies_group = pygame.sprite.Group()
 healths_group = pygame.sprite.Group()
+dropable_group = pygame.sprite.Group()
 all_enemies = []
 
 
@@ -193,7 +194,17 @@ health_player = {"health_1": load_image('ui (new)/health_ui.png', 250, 50),
 
 enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png', 60, 60)}
 
+drop_objects = [load_image('props_itens\key_silver.png', 50, 50), load_image('props_itens\potion_green.png', 50, 50),
+                load_image('props_itens\potion_red.png', 50, 50), load_image('props_itens\potion_yellow.png', 50, 50)]
+
 tile_width = tile_height = 60
+
+
+class DropableObjects(pygame.sprite.Sprite):
+    def __init__(self, drop_ob, pos_x, pos_y):
+        super().__init__(dropable_group)
+        self.image = drop_ob
+        self.rect = self.image.get_rect().move(pos_x, pos_y)
 
 
 class Tile(pygame.sprite.Sprite):
@@ -201,6 +212,7 @@ class Tile(pygame.sprite.Sprite):
         super().__init__(tiles_group, all_sprites)
         self.image = tile_images[tile_type]
         self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x, TOP_IND + tile_height * pos_y)
+
 
 
 class Wall(Tile):
@@ -251,6 +263,8 @@ class Weapon:
             target.hp -= self.damage
             if not target.is_alive():
                 if isinstance(target, BaseEnemy):
+                    x, y = target.rect.x, target.rect.y
+                    DropableObjects(random.choice(drop_objects), x, y)
                     target.kill()
                 else:
                     target.kill()
@@ -459,6 +473,7 @@ while running:
     enemies_group.draw(screen)
     player_group.draw(screen)
     healths_group.draw(screen)
+    dropable_group.draw(screen)
     pygame.display.flip()
 
     clock.tick(FPS)
