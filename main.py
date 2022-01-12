@@ -224,15 +224,21 @@ class Wall(Tile):
     def proverka(self, tile_type, rect):
         if tile_type in ["wall_1", "wall_2", "wall_3", "wall_crack"]:
             list_top.append(rect)
-            if len(list_top) == 11:
-                list_right.append(rect)
-        if tile_type == "wall_left":
+            if number_location == 1:
+                if len(list_top) == 11:
+                    list_right.append(rect)
+            else:
+                if rect.x <= 320:
+                    list_left.append(rect)
+                elif rect.x >= 400:
+                    list_right.append(rect)
+        elif tile_type == "wall_left" or tile_type == "wall_top_inner_left_2":
             list_left.append(rect)
-        if tile_type == "wall_bottom" or tile_type == "wall_bottom_left":
+        elif tile_type == "wall_bottom" or tile_type == "wall_bottom_left" or tile_type == "wall_bottom_right":
             list_bottom.append(rect)
-        if tile_type == "wall_right":
+        elif tile_type == "wall_right":
             list_right.append(rect)
-        if tile_type == "wall_top_inner_right_2":
+        elif tile_type == "wall_top_inner_right_2":
             list_right.append(rect)
 
 
@@ -383,7 +389,7 @@ healths = Health_Player("health_5")
 ENEMIEGOEVENT = pygame.USEREVENT + 1
 pygame.time.set_timer(ENEMIEGOEVENT, 100)
 MYEVENTTYPE = pygame.USEREVENT + 1
-pygame.time.set_timer(MYEVENTTYPE, 2000)
+pygame.time.set_timer(MYEVENTTYPE, 450)
 
 running = True
 while running:
@@ -468,23 +474,25 @@ while running:
 
         if len(enemies_group) == 0:
             for spike in spikes_group:
-                spike.image = spikes_down
-                try:
-                    list_right.remove(spike)
-                    list_left.remove(spike)
-                except:
-                    pass
+                if spike.rect.x >= 400:
+                    spike.image = spikes_down
+                    try:
+                        list_right.remove(spike)
+                        list_left.remove(spike)
+                    except:
+                        pass
             ans = pygame.sprite.spritecollide(player, spikes_group, False)
             if len(ans) >= 4:
                 number_location += 1
                 if number_location > 10:
                     number_dungeon += 1
                 now_player = player
-                for sprt in tiles_group:
-                    sprt.kill()
-                player.kill()
+                for sprt in all_sprites:
+                    if sprt not in player_group:
+                        sprt.kill()
                 level = load_level(number_dungeon, number_location)
                 player, goblins, level_x, level_y = generate_level(level)
+                player.kill()
                 player = now_player
                 player.rect.x = 230
                 for goblin in goblins:
