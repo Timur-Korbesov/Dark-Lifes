@@ -372,7 +372,7 @@ healths = Health_Player("health_5")
 ENEMIEGOEVENT = pygame.USEREVENT + 1
 pygame.time.set_timer(ENEMIEGOEVENT, 100)
 MYEVENTTYPE = pygame.USEREVENT + 1
-pygame.time.set_timer(MYEVENTTYPE, 2000)
+pygame.time.set_timer(MYEVENTTYPE, 450)
 
 running = True
 while running:
