@@ -28,7 +28,7 @@ spikes_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 enemies_group = pygame.sprite.Group()
 healths_group = pygame.sprite.Group()
-all_enemies = []
+dropable_group = pygame.sprite.Group()
 
 
 def load_image(name, width=None, height=None, colorkey=None):
@@ -61,7 +61,7 @@ def load_level(number_dungeon, number_location):
 
 
 def generate_level(level):
-    new_player, new_enemie_goblin, x, y = None, [], None, None
+    new_player, new_enemies, x, y = None, [], None, None
     for y in range(len(level)):
         for x in range(len(level[y])):
             # Floors
@@ -116,10 +116,13 @@ def generate_level(level):
             # Enemies
             elif level[y][x] == '!':
                 Tile('floor_1', x, y)
-                new_enemie_goblin.append(Enemie_Goblin('enemie_goblin', x, y))
+                new_enemies.append(Enemie_Goblin(x, y))
+            elif level[y][x] == '&':
+                Tile('floor_1', x, y)
+                new_enemies.append(Enemie_Slime(x, y))
 
     # вернем игрока, а также размер поля в клетках
-    return new_player, new_enemie_goblin, x, y
+    return new_player, new_enemies, x, y
 
 
 def terminate():
@@ -207,9 +210,20 @@ health_player = {"health_1": load_image('ui (new)/health_ui.png', 250, 50),
                  "health_4": load_image('ui (new)/health_ui_4.png', 250, 50),
                  "health_5": load_image('ui (new)/health_ui_5.png', 250, 50)}
 
-enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png', 60, 60)}
+enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png', 60, 60),
+           'enemie_slime': load_image('enemies/slime/slime_idle_anim_f0.png', 60, 60)}
+
+drop_objects = [load_image('props_itens\key_silver.png', 50, 50), load_image('props_itens\potion_green.png', 50, 50),
+                load_image('props_itens\potion_red.png', 50, 50), load_image('props_itens\potion_yellow.png', 50, 50)]
 
 tile_width = tile_height = 60
+
+
+class DropableObjects(pygame.sprite.Sprite):
+    def __init__(self, drop_ob, pos_x, pos_y):
+        super().__init__(dropable_group, all_sprites)
+        self.image = drop_ob
+        self.rect = self.image.get_rect().move(pos_x, pos_y)
 
 
 class Tile(pygame.sprite.Sprite):
@@ -227,21 +241,15 @@ class Wall(Tile):
     def proverka(self, tile_type, rect):
         if tile_type in ["wall_1", "wall_2", "wall_3", "wall_crack"]:
             list_top.append(rect)
-            if number_location == 1:
-                if len(list_top) == 11:
-                    list_right.append(rect)
-            else:
-                if rect.x <= 320:
-                    list_left.append(rect)
-                elif rect.x >= 400:
-                    list_right.append(rect)
-        elif tile_type == "wall_left" or tile_type == "wall_top_inner_left_2":
+            if len(list_top) == 11:
+                list_right.append(rect)
+        if tile_type == "wall_left":
             list_left.append(rect)
-        elif tile_type == "wall_bottom" or tile_type == "wall_bottom_left" or tile_type == "wall_bottom_right":
+        if tile_type == "wall_bottom" or tile_type == "wall_bottom_left":
             list_bottom.append(rect)
-        elif tile_type == "wall_right":
+        if tile_type == "wall_right":
             list_right.append(rect)
-        elif tile_type == "wall_top_inner_right_2":
+        if tile_type == "wall_top_inner_right_2":
             list_right.append(rect)
 
 
@@ -277,7 +285,12 @@ class Weapon:
             target.hp -= self.damage
             if not target.is_alive():
                 if isinstance(target, BaseEnemy):
+                    selection = random.choice(["-", "+", "-", "+", "-"])
+                    if selection == "+":
+                        x, y = target.rect.x, target.rect.y
+                        DropableObjects(random.choice(drop_objects), x, y)
                     target.kill()
+                    all_enemies.remove(target)
                 else:
                     target.kill()
             print(target.hp)
@@ -331,7 +344,7 @@ class BaseEnemy(pygame.sprite.Sprite):
         super().__init__(enemies_group, all_sprites)
         self.image = enemies[name_enemie]
         self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x + 15, TOP_IND + tile_height * pos_y + 5)
-        self.goblin_weapons = []
+        self.enemie_weapons = []
         self.eqip_weapon = 0
         self.hp = 30
 
@@ -344,18 +357,26 @@ class BaseEnemy(pygame.sprite.Sprite):
 
     def add_weapon(self, weapon):
         if isinstance(weapon, Weapon):
-            self.goblin_weapons.append(weapon)
+            self.enemie_weapons.append(weapon)
             print('Подобрал', weapon, "(гоблин)")
         else:
             print('Это не оружие')
 
     def hit(self, target):
-        self.goblin_weapons[self.eqip_weapon].hit(self, target)
+        self.enemie_weapons[self.eqip_weapon].hit(self, target)
 
 
 class Enemie_Goblin(BaseEnemy):
-    def __init__(self, name_enemie, pos_x, pos_y):
-        super().__init__(name_enemie, pos_x, pos_y)
+    def __init__(self, pos_x, pos_y):
+        super().__init__('enemie_goblin', pos_x, pos_y)
+        self.enemie_weapons.append(sword_for_goblin)
+        self.hp = 50
+
+
+class Enemie_Slime(BaseEnemy):
+    def __init__(self, pos_x, pos_y):
+        super().__init__('enemie_slime', pos_x, pos_y)
+        self.enemie_weapons.append(slize_for_slime)
 
 
 class Camera:
@@ -377,22 +398,23 @@ class Camera:
 
 
 start_screen()
-level = load_level(number_dungeon, number_location)
-player, goblins, level_x, level_y = generate_level(level)
-camera = Camera((level_x, level_y))
+
 pygame.display.set_caption('Dark Lifes')
 # Оружия
 sword_for_player = Weapon('Меч', 10, 100)
-player.add_weapon(sword_for_player)
-sword_for_enemy = Weapon('Меч', 4, 100)
-for goblin in goblins:
-    goblin.add_weapon(sword_for_enemy)
+sword_for_goblin = Weapon('Меч', 8, 100)
+slize_for_slime = Weapon('Меч', 4, 100)
 healths = Health_Player("health_5")
 # Таймеры
 ENEMIEGOEVENT = pygame.USEREVENT + 1
 pygame.time.set_timer(ENEMIEGOEVENT, 100)
 MYEVENTTYPE = pygame.USEREVENT + 1
-pygame.time.set_timer(MYEVENTTYPE, 450)
+pygame.time.set_timer(MYEVENTTYPE, 1000)
+
+level = load_level(number_dungeon, number_location)
+player, all_enemies, level_x, level_y = generate_level(level)
+player.add_weapon(sword_for_player)
+camera = Camera((level_x, level_y))
 
 running = True
 while running:
@@ -436,7 +458,6 @@ while running:
             if event.button == 1:
                 for enemie in enemies_group:
                     player.hit(enemie)
-
         for enemie in enemies_group:
             if event.type == ENEMIEGOEVENT:
                 player_x, player_y = player.rect.x, player.rect.y
@@ -455,8 +476,8 @@ while running:
                     enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
                     enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
             if event.type == MYEVENTTYPE:
-                for goblin in goblins:
-                    goblin.hit(player)
+                for enemie in all_enemies:
+                    enemie.hit(player)
                     if not player.is_alive():
                         player.hp = 100
                         player = Player(5, 5)
@@ -474,7 +495,6 @@ while running:
                         elif 0 < player.hp <= 25:
                             healths.kill()
                             healths = Health_Player("health_2")
-
         if len(enemies_group) == 0:
             for spike in spikes_group:
                 if spike.rect.x >= 400:
@@ -494,12 +514,10 @@ while running:
                     if sprt not in player_group:
                         sprt.kill()
                 level = load_level(number_dungeon, number_location)
-                player, goblins, level_x, level_y = generate_level(level)
+                player, all_enemies, level_x, level_y = generate_level(level)
                 player.kill()
                 player = now_player
                 player.rect.x = 230
-                for goblin in goblins:
-                    goblin.add_weapon(sword_for_enemy)
                 camera = Camera((level_x, level_y))
 
     camera.update(player)
