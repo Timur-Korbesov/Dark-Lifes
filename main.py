@@ -9,8 +9,8 @@ pygame.init()
 pygame.key.set_repeat(200, 70)
 
 FPS = 100
-WIDTH = 1000
-HEIGHT = 850
+WIDTH = 700
+HEIGHT = 650
 STEP = 30
 STEPEN = 10
 LEFT_IND = 50
