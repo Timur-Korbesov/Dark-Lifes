@@ -268,6 +268,7 @@ class Weapon:
                         x, y = target.rect.x, target.rect.y
                         DropableObjects(random.choice(drop_objects), x, y)
                     target.kill()
+                    goblins.remove(target)
                 else:
                     target.kill()
             print(target.hp)
