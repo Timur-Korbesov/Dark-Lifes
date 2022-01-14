@@ -344,7 +344,7 @@ class BaseEnemy(pygame.sprite.Sprite):
         super().__init__(enemies_group, all_sprites)
         self.image = enemies[name_enemie]
         self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x + 15, TOP_IND + tile_height * pos_y + 5)
-        self.goblin_weapons = []
+        self.enemie_weapons = []
         self.eqip_weapon = 0
         self.hp = 30
 
@@ -357,23 +357,26 @@ class BaseEnemy(pygame.sprite.Sprite):
 
     def add_weapon(self, weapon):
         if isinstance(weapon, Weapon):
-            self.goblin_weapons.append(weapon)
+            self.enemie_weapons.append(weapon)
             print('Подобрал', weapon, "(гоблин)")
         else:
             print('Это не оружие')
 
     def hit(self, target):
-        self.goblin_weapons[self.eqip_weapon].hit(self, target)
+        self.enemie_weapons[self.eqip_weapon].hit(self, target)
 
 
 class Enemie_Goblin(BaseEnemy):
     def __init__(self, pos_x, pos_y):
         super().__init__('enemie_goblin', pos_x, pos_y)
+        self.enemie_weapons.append(sword_for_goblin)
+        self.hp = 50
 
 
 class Enemie_Slime(BaseEnemy):
     def __init__(self, pos_x, pos_y):
         super().__init__('enemie_slime', pos_x, pos_y)
+        self.enemie_weapons.append(slize_for_slime)
 
 
 class Camera:
@@ -396,22 +399,22 @@ class Camera:
 
 start_screen()
 
-level = load_level(number_dungeon, number_location)
-player, goblins, level_x, level_y = generate_level(level)
-camera = Camera((level_x, level_y))
 pygame.display.set_caption('Dark Lifes')
 # Оружия
 sword_for_player = Weapon('Меч', 10, 100)
-player.add_weapon(sword_for_player)
-sword_for_enemy = Weapon('Меч', 4, 100)
-for goblin in goblins:
-    goblin.add_weapon(sword_for_enemy)
+sword_for_goblin = Weapon('Меч', 8, 100)
+slize_for_slime = Weapon('Меч', 4, 100)
 healths = Health_Player("health_5")
 # Таймеры
 ENEMIEGOEVENT = pygame.USEREVENT + 1
 pygame.time.set_timer(ENEMIEGOEVENT, 100)
 MYEVENTTYPE = pygame.USEREVENT + 1
-pygame.time.set_timer(MYEVENTTYPE, 2000)
+pygame.time.set_timer(MYEVENTTYPE, 1000)
+
+level = load_level(number_dungeon, number_location)
+player, goblins, level_x, level_y = generate_level(level)
+player.add_weapon(sword_for_player)
+camera = Camera((level_x, level_y))
 
 running = True
 while running:
