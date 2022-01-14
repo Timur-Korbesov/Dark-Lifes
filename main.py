@@ -9,8 +9,8 @@ pygame.init()
 pygame.key.set_repeat(200, 70)
 
 FPS = 100
-WIDTH = 1000
-HEIGHT = 850
+WIDTH = 700
+HEIGHT = 650
 STEP = 30
 STEPEN = 10
 LEFT_IND = 50
@@ -201,6 +201,8 @@ tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
 player_image_right = load_image('heroes/knight/knight_idle_anim_f0.png', 60, 60)
 player_image_left = pygame.transform.flip(player_image_right, True, False)
 
+player_image_anim = load_image('heroes/knight/knight_run_spritesheet.png', 360, 60)
+
 spikes_up = load_image('tiles/floor/spikes_anim_f9.png', 60, 60)
 spikes_down = load_image('tiles/floor/spikes_anim_f0.png', 60, 60)
 
@@ -241,15 +243,30 @@ class Wall(Tile):
     def proverka(self, tile_type, rect):
         if tile_type in ["wall_1", "wall_2", "wall_3", "wall_crack"]:
             list_top.append(rect)
-            if len(list_top) == 11:
-                list_right.append(rect)
+            if number_location > 1:
+                if len(list_top) == 12:
+                    list_left.append(rect)
+                elif len(list_top) == 13:
+                    list_right.append(rect)
+            else:
+                if len(list_top) == 11:
+                    list_right.append(rect)
         if tile_type == "wall_left":
+            if number_location == 1:
+                if len(list_top) == 11:
+                    list_right.append(rect)
+            else:
+                if rect.x <= 320:
+                    list_left.append(rect)
+                elif rect.x >= 400:
+                    list_right.append(rect)
+        elif tile_type == "wall_left" or tile_type == "wall_top_inner_left_2":
             list_left.append(rect)
-        if tile_type == "wall_bottom" or tile_type == "wall_bottom_left":
+        elif tile_type == "wall_bottom" or tile_type == "wall_bottom_left" or tile_type == "wall_bottom_right":
             list_bottom.append(rect)
-        if tile_type == "wall_right":
+        elif tile_type == "wall_right":
             list_right.append(rect)
-        if tile_type == "wall_top_inner_right_2":
+        elif tile_type == "wall_top_inner_right_2":
             list_right.append(rect)
 
 
@@ -258,15 +275,6 @@ class Health_Player(pygame.sprite.Sprite):
         super().__init__(tiles_group, healths_group)
         self.image = health_player[health_number]
         self.rect = self.image.get_rect().move(10, 10)
-
-
-class Spikes(pygame.sprite.Sprite):
-    def __init__(self, pos_x, pos_y):
-        super().__init__(spikes_group, all_sprites)
-        self.image = spikes_up
-        self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x, TOP_IND + tile_height * pos_y)
-        list_right.append(self.rect)
-        list_left.append(self.rect)
 
 
 class Weapon:
@@ -290,7 +298,7 @@ class Weapon:
                         x, y = target.rect.x, target.rect.y
                         DropableObjects(random.choice(drop_objects), x, y)
                     target.kill()
-                    goblins.remove(target)
+                    all_enemies.remove(target)
                 else:
                     target.kill()
             print(target.hp)
@@ -301,11 +309,46 @@ class Weapon:
         return self.name
 
 
-class Player(pygame.sprite.Sprite):
+class AnimatedSprite(pygame.sprite.Sprite):
+    def __init__(self, sheet, columns, rows, x, y, group_sprites, delta=2):
+        super().__init__(group_sprites, all_sprites)
+        self.frames = []
+        self.cut_sheet(sheet, columns, rows)
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]
+        self.rect = self.rect.move(x, y)
+        self.delta = delta
+        self.time = 0
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
+    def update(self):
+        self.time += 1
+        if self.time == self.delta:
+            self.time = 0
+            self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+            self.image = self.frames[self.cur_frame]
+
+
+class Spikes(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
-        super().__init__(player_group, all_sprites)
-        self.image = player_image_right
-        self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x + 16, TOP_IND + tile_height * pos_y + 5)
+        super().__init__(spikes_group, all_sprites)
+        self.image = spikes_up
+        self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x, TOP_IND + tile_height * pos_y)
+        list_right.append(self.rect)
+        list_left.append(self.rect)
+
+
+class Player(AnimatedSprite):
+    def __init__(self, pos_x, pos_y):
+        super().__init__(player_image_anim, 6, 1, LEFT_IND + tile_width * pos_x + 16, TOP_IND + tile_height * pos_y + 5, player_group)
         self.hp = 100
         self.player_weapons = []
         self.eqip_weapon = 0
@@ -412,7 +455,7 @@ MYEVENTTYPE = pygame.USEREVENT + 1
 pygame.time.set_timer(MYEVENTTYPE, 1000)
 
 level = load_level(number_dungeon, number_location)
-player, goblins, level_x, level_y = generate_level(level)
+player, all_enemies, level_x, level_y = generate_level(level)
 player.add_weapon(sword_for_player)
 camera = Camera((level_x, level_y))
 
@@ -423,14 +466,15 @@ while running:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT or event.key == pygame.K_a:
-                player.image = player_image_left
+                #player.image = player_image_left
                 for lt in list_left:
                     if player.rect.collidepoint(lt.bottomright):
                         break
                 else:
+                    player_group.update()
                     player.rect.x -= STEP
             if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-                player.image = player_image_right
+               # player.image = player_image_right
                 for r in list_right:
                     if list_right[0] == r:
                         if player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
@@ -440,18 +484,21 @@ while running:
                                 player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
                             break
                 else:
+                    player_group.update()
                     player.rect.x += STEP
             if event.key == pygame.K_UP or event.key == pygame.K_w:
                 for h in list_top:
                     if player.rect.collidepoint(h.center[0], h.center[1] + 10):
                         break
                 else:
+                    player_group.update()
                     player.rect.y -= STEP
             if event.key == pygame.K_DOWN or event.key == pygame.K_s:
                 for b in list_bottom:
                     if player.rect.collidepoint(b.top + 30, b.left):
                         break
                 else:
+                    player_group.update()
                     player.rect.y += STEP
 
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -476,8 +523,8 @@ while running:
                     enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
                     enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
             if event.type == MYEVENTTYPE:
-                for goblin in goblins:
-                    goblin.hit(player)
+                for enemie in all_enemies:
+                    enemie.hit(player)
                     if not player.is_alive():
                         player.hp = 100
                         player = Player(5, 5)
@@ -514,12 +561,10 @@ while running:
                     if sprt not in player_group:
                         sprt.kill()
                 level = load_level(number_dungeon, number_location)
-                player, goblins, level_x, level_y = generate_level(level)
+                player, all_enemies, level_x, level_y = generate_level(level)
                 player.kill()
                 player = now_player
-                player.rect.x = 230
-                for goblin in goblins:
-                    goblin.add_weapon(sword_for_enemy)
+                player.rect.x = 270
                 camera = Camera((level_x, level_y))
 
     camera.update(player)
