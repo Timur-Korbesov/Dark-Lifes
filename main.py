@@ -9,8 +9,8 @@ pygame.init()
 pygame.key.set_repeat(200, 70)
 
 FPS = 100
-WIDTH = 700
-HEIGHT = 650
+WIDTH = 1000
+HEIGHT = 850
 STEP = 30
 STEPEN = 10
 LEFT_IND = 50
@@ -92,12 +92,14 @@ def generate_level(level):
                 Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
                 Wall('wall_top_inner_right_2', x, y - 1)
             elif level[y][x] == '>':
+                Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
                 Wall('wall_bottom_left', x, y - 1)
 
             elif level[y][x] == ';':
                 Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
                 Wall('wall_top_inner_left_2', x, y - 1)
             elif level[y][x] == ':':
+                Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
                 Wall('wall_bottom_right', x, y - 1)
 
             elif level[y][x] == '#':
@@ -105,6 +107,7 @@ def generate_level(level):
                 Wall('wall_top', x, y - 1)
 
             elif level[y][x] == '+':
+                Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
                 Wall('wall_bottom', x, y - 1)
             # Hero
             elif level[y][x] == '@':
