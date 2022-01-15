@@ -9,14 +9,15 @@ pygame.init()
 pygame.key.set_repeat(200, 70)
 
 FPS = 100
-WIDTH = 1000
-HEIGHT = 850
+WIDTH = 700
+HEIGHT = 650
 STEP = 30
 STEPEN = 10
 LEFT_IND = 50
 TOP_IND = 50
 number_dungeon = 1
 number_location = 1
+
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
@@ -216,6 +217,8 @@ enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png',
 drop_objects = [load_image('props_itens\key_silver.png', 50, 50), load_image('props_itens\potion_green.png', 50, 50),
                 load_image('props_itens\potion_red.png', 50, 50), load_image('props_itens\potion_yellow.png', 50, 50)]
 
+flag_moves_enemys = True
+
 tile_width = tile_height = 60
 
 
@@ -285,10 +288,11 @@ class Weapon:
             target.hp -= self.damage
             if not target.is_alive():
                 if isinstance(target, BaseEnemy):
-                    selection = random.choice(["-", "+", "-", "+", "-"])
+                    selection = random.choice(["-", "+"])
                     if selection == "+":
                         x, y = target.rect.x, target.rect.y
-                        DropableObjects(random.choice(drop_objects), x, y)
+                        drop = DropableObjects(random.choice(drop_objects), x, y)
+                        drop_list.append(drop)
                     target.kill()
                     goblins.remove(target)
                 else:
@@ -299,6 +303,7 @@ class Weapon:
 
     def __str__(self):
         return self.name
+
 
 
 class Player(pygame.sprite.Sprite):
@@ -411,6 +416,8 @@ pygame.time.set_timer(ENEMIEGOEVENT, 100)
 MYEVENTTYPE = pygame.USEREVENT + 1
 pygame.time.set_timer(MYEVENTTYPE, 1000)
 
+drop_list = []
+
 level = load_level(number_dungeon, number_location)
 player, goblins, level_x, level_y = generate_level(level)
 player.add_weapon(sword_for_player)
@@ -458,6 +465,18 @@ while running:
             if event.button == 1:
                 for enemie in enemies_group:
                     player.hit(enemie)
+
+        for drops in drop_list:
+            if drops.rect.colliderect(player.rect):
+                if drop_objects.index(drops.image) == 2:
+                    player.hp = 100
+                    healths.kill()
+                    healths = Health_Player("health_5")
+                    print("Вы подобрали зелье восстановления здоровья")
+                elif drop_objects.index(drops.image) == 3:
+                    pass
+                drops.kill()
+                drop_list.remove(drops)
         for enemie in enemies_group:
             if event.type == ENEMIEGOEVENT:
                 player_x, player_y = player.rect.x, player.rect.y
@@ -475,26 +494,26 @@ while running:
                 else:
                     enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
                     enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
-            if event.type == MYEVENTTYPE:
-                for goblin in goblins:
-                    goblin.hit(player)
-                    if not player.is_alive():
-                        player.hp = 100
-                        player = Player(5, 5)
-                        player.hp = 100
+        if event.type == MYEVENTTYPE:
+            for goblin in goblins:
+                goblin.hit(player)
+                if not player.is_alive():
+                    player.hp = 100
+                    player = Player(5, 5)
+                    player.hp = 100
+                    healths.kill()
+                    healths = Health_Player("health_5")
+                    player.add_weapon(sword_for_player)
+                else:
+                    if 50 < player.hp <= 75:
                         healths.kill()
-                        healths = Health_Player("health_5")
-                        player.add_weapon(sword_for_player)
-                    else:
-                        if 50 < player.hp <= 75:
-                            healths.kill()
-                            healths = Health_Player("health_4")
-                        elif 25 < player.hp <= 50:
-                            healths.kill()
-                            healths = Health_Player("health_3")
-                        elif 0 < player.hp <= 25:
-                            healths.kill()
-                            healths = Health_Player("health_2")
+                        healths = Health_Player("health_4")
+                    elif 25 < player.hp <= 50:
+                        healths.kill()
+                        healths = Health_Player("health_3")
+                    elif 0 < player.hp <= 25:
+                        healths.kill()
+                        healths = Health_Player("health_2")
         if len(enemies_group) == 0:
             for spike in spikes_group:
                 if spike.rect.x >= 400:
@@ -519,7 +538,7 @@ while running:
                 player = now_player
                 player.rect.x = 230
                 for goblin in goblins:
-                    goblin.add_weapon(sword_for_enemy)
+                    goblin.add_weapon(sword_for_goblin)
                 camera = Camera((level_x, level_y))
 
     camera.update(player)
@@ -527,10 +546,11 @@ while running:
     for sprite in all_sprites:
         camera.apply(sprite)
 
-    screen.fill(pygame.Color(181, 83, 83))
+    screen.fill(pygame.Color(124, 72, 36))
     spikes_group.draw(screen)
     tiles_group.draw(screen)
     enemies_group.draw(screen)
+    dropable_group.draw(screen)
     player_group.draw(screen)
     healths_group.draw(screen)
     pygame.display.flip()
