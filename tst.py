@@ -137,7 +137,7 @@ def start_screen():
                   "",
                   ""]
 
-    fon = pygame.transform.scale(load_image('ui (new)/screen_start.png'), (WIDTH, HEIGHT))
+    fon = pygame.transform.scale(load_image('full tilemap.png'), (WIDTH, HEIGHT))
     screen.blit(fon, (0, 0))
     font = pygame.font.Font(None, 30)
     text_coord = 50
@@ -289,10 +289,10 @@ class Weapon:
             target.hp -= self.damage
             if not target.is_alive():
                 if isinstance(target, BaseEnemy):
-                    selection = random.choice(["-", "+"])
+                    selection = random.choice(["+"])
                     if selection == "+":
                         x, y = target.rect.x, target.rect.y
-                        drop = DropableObjects(random.choice(drop_objects), x, y)
+                        drop = DropableObjects(drop_objects[3], x, y)
                         drop_list.append(drop)
                     target.kill()
                     goblins.remove(target)
@@ -416,6 +416,9 @@ ENEMIEGOEVENT = pygame.USEREVENT + 1
 pygame.time.set_timer(ENEMIEGOEVENT, 100)
 MYEVENTTYPE = pygame.USEREVENT + 1
 pygame.time.set_timer(MYEVENTTYPE, 1000)
+SUPERSWORD = pygame.USEREVENT + 2
+
+time_flag = True
 
 drop_list = []
 
@@ -467,15 +470,45 @@ while running:
                 for enemie in enemies_group:
                     player.hit(enemie)
 
+        if time_flag and player.eqip_weapon == 1:
+            time_flag = False
+            pygame.time.set_timer(SUPERSWORD, 10000)
+
+
+        if player.eqip_weapon == 1 and event.type == SUPERSWORD:
+            player.eqip_weapon = 0
+            print("Действия зелёного зелья закончилось")
+
         for drops in drop_list:
             if drops.rect.colliderect(player.rect):
-                if drop_objects.index(drops.image) == 2:
+                if drop_objects.index(drops.image) == 1:
+                    delta = random.choice([-25, 25])
+                    player.hp += delta
+                    if delta < 0:
+                        print("Вам подобрали отравленное зелье, на -25 жизней")
+                    else:
+                        print("Вам подобрали полезное зелье, на +25 жизней")
+                    if 50 < player.hp <= 75:
+                        healths.kill()
+                        healths = Health_Player("health_4")
+                    elif 25 < player.hp <= 50:
+                        healths.kill()
+                        healths = Health_Player("health_3")
+                    elif 0 < player.hp <= 25:
+                        healths.kill()
+                        healths = Health_Player("health_2")
+                    print("Вы подобрали зелье случайного изменения жизней")
+                elif drop_objects.index(drops.image) == 2:
                     player.hp = 100
                     healths.kill()
                     healths = Health_Player("health_5")
                     print("Вы подобрали зелье восстановления здоровья")
                 elif drop_objects.index(drops.image) == 3:
-                    pass
+                    if player.eqip_weapon != 1:
+                        sword_for_player_2 = Weapon('Меч', 20, 120)
+                        player.add_weapon(sword_for_player_2)
+                        player.eqip_weapon = 1
+                        print("Вы подобрали зелье, дающее супер меч на некоторое время")
                 drops.kill()
                 drop_list.remove(drops)
         for enemie in enemies_group:
