@@ -136,7 +136,7 @@ def start_screen():
                   "Если в правилах несколько строк,",
                   "приходится выводить их построчно"]
 
-    fon = pygame.transform.scale(load_image('full tilemap.png'), (WIDTH, HEIGHT))
+    fon = pygame.transform.scale(load_image('ui (new)/start_screen.png'), (WIDTH, HEIGHT))
     screen.blit(fon, (0, 0))
     font = pygame.font.Font(None, 30)
     text_coord = 50
@@ -201,7 +201,9 @@ tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
 player_image_right = load_image('heroes/knight/knight_idle_anim_f0.png', 60, 60)
 player_image_left = pygame.transform.flip(player_image_right, True, False)
 
-player_image_anim = load_image('heroes/knight/knight_run_spritesheet.png', 360, 60)
+player_image_anim_right = load_image('heroes/knight/knight_run_spritesheet.png', 360, 60)
+player_image_anim_left = pygame.transform.flip(player_image_anim_right, True, False)
+player_image_anim_stay = load_image('heroes/knight/knight_idle_spritesheet.png', 360, 60)
 
 spikes_up = load_image('tiles/floor/spikes_anim_f9.png', 60, 60)
 spikes_down = load_image('tiles/floor/spikes_anim_f0.png', 60, 60)
@@ -244,9 +246,9 @@ class Wall(Tile):
         if tile_type in ["wall_1", "wall_2", "wall_3", "wall_crack"]:
             list_top.append(rect)
             if number_location > 1:
-                if len(list_top) == 12:
+                if len(list_top) == 13:
                     list_left.append(rect)
-                elif len(list_top) == 13:
+                elif len(list_top) == 14:
                     list_right.append(rect)
             else:
                 if len(list_top) == 11:
@@ -313,6 +315,7 @@ class AnimatedSprite(pygame.sprite.Sprite):
     def __init__(self, sheet, columns, rows, x, y, group_sprites, delta=2):
         super().__init__(group_sprites, all_sprites)
         self.frames = []
+        self.cnt = 0
         self.cut_sheet(sheet, columns, rows)
         self.cur_frame = 0
         self.image = self.frames[self.cur_frame]
@@ -321,8 +324,10 @@ class AnimatedSprite(pygame.sprite.Sprite):
         self.time = 0
 
     def cut_sheet(self, sheet, columns, rows):
-        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
-                                sheet.get_height() // rows)
+        if self.cnt == 0:
+            self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                        sheet.get_height() // rows)
+            self.cnt += 1
         for j in range(rows):
             for i in range(columns):
                 frame_location = (self.rect.w * i, self.rect.h * j)
@@ -348,7 +353,7 @@ class Spikes(pygame.sprite.Sprite):
 
 class Player(AnimatedSprite):
     def __init__(self, pos_x, pos_y):
-        super().__init__(player_image_anim, 6, 1, LEFT_IND + tile_width * pos_x + 16, TOP_IND + tile_height * pos_y + 5, player_group)
+        super().__init__(player_image_anim_right, 6, 1, LEFT_IND + tile_width * pos_x + 16, TOP_IND + tile_height * pos_y + 5, player_group)
         self.hp = 100
         self.player_weapons = []
         self.eqip_weapon = 0
@@ -450,9 +455,9 @@ slize_for_slime = Weapon('Меч', 4, 100)
 healths = Health_Player("health_5")
 # Таймеры
 ENEMIEGOEVENT = pygame.USEREVENT + 1
-pygame.time.set_timer(ENEMIEGOEVENT, 100)
-MYEVENTTYPE = pygame.USEREVENT + 1
-pygame.time.set_timer(MYEVENTTYPE, 1000)
+pygame.time.set_timer(ENEMIEGOEVENT, 400)
+MYEVENTTYPE = pygame.USEREVENT + 2
+pygame.time.set_timer(MYEVENTTYPE, 1200)
 
 level = load_level(number_dungeon, number_location)
 player, all_enemies, level_x, level_y = generate_level(level)
@@ -460,21 +465,32 @@ player.add_weapon(sword_for_player)
 camera = Camera((level_x, level_y))
 
 running = True
+
+L_or_R_or_S = 'stay'
 while running:
+    # if
+    # player.frames = []
+    # player.cur_frame = 0
+    # player.cut_sheet(player_image_anim_stay, 6, 1)
+    # player_group.update()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT or event.key == pygame.K_a:
-                #player.image = player_image_left
                 for lt in list_left:
                     if player.rect.collidepoint(lt.bottomright):
                         break
                 else:
+                    if L_or_R_or_S == 'right' or L_or_R_or_S == 'stay':
+                        L_or_R_or_S = 'left'
+                        player.frames = []
+                        player.cur_frame = 0
+                        player.cut_sheet(player_image_anim_left, 6, 1)
                     player_group.update()
                     player.rect.x -= STEP
-            if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-               # player.image = player_image_right
+
+            elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                 for r in list_right:
                     if list_right[0] == r:
                         if player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
@@ -484,29 +500,36 @@ while running:
                                 player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
                             break
                 else:
+                    if L_or_R_or_S == 'left' or L_or_R_or_S == 'stay':
+                        L_or_R_or_S = 'right'
+                        player.frames = []
+                        player.cur_frame = 0
+                        player.cut_sheet(player_image_anim_right, 6, 1)
                     player_group.update()
                     player.rect.x += STEP
-            if event.key == pygame.K_UP or event.key == pygame.K_w:
+
+            elif event.key == pygame.K_UP or event.key == pygame.K_w:
                 for h in list_top:
                     if player.rect.collidepoint(h.center[0], h.center[1] + 10):
                         break
                 else:
                     player_group.update()
                     player.rect.y -= STEP
-            if event.key == pygame.K_DOWN or event.key == pygame.K_s:
+
+            elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
                 for b in list_bottom:
                     if player.rect.collidepoint(b.top + 30, b.left):
                         break
                 else:
                     player_group.update()
                     player.rect.y += STEP
-
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 for enemie in enemies_group:
                     player.hit(enemie)
-        for enemie in enemies_group:
-            if event.type == ENEMIEGOEVENT:
+
+        if event.type == ENEMIEGOEVENT:
+            for enemie in all_enemies:
                 player_x, player_y = player.rect.x, player.rect.y
                 enemie_x, enemie_y = enemie.rect.x, enemie.rect.y
                 ans = pygame.sprite.spritecollide(enemie, enemies_group, False)
@@ -522,26 +545,28 @@ while running:
                 else:
                     enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
                     enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
-            if event.type == MYEVENTTYPE:
-                for enemie in all_enemies:
-                    enemie.hit(player)
-                    if not player.is_alive():
-                        player.hp = 100
-                        player = Player(5, 5)
-                        player.hp = 100
+
+        if event.type == MYEVENTTYPE:
+            for enemie in all_enemies:
+                enemie.hit(player)
+                if not player.is_alive():
+                    player.hp = 100
+                    player = Player(5, 5)
+                    player.hp = 100
+                    healths.kill()
+                    healths = Health_Player("health_5")
+                    player.add_weapon(sword_for_player)
+                else:
+                    if 50 < player.hp <= 75:
                         healths.kill()
-                        healths = Health_Player("health_5")
-                        player.add_weapon(sword_for_player)
-                    else:
-                        if 50 < player.hp <= 75:
-                            healths.kill()
-                            healths = Health_Player("health_4")
-                        elif 25 < player.hp <= 50:
-                            healths.kill()
-                            healths = Health_Player("health_3")
-                        elif 0 < player.hp <= 25:
-                            healths.kill()
-                            healths = Health_Player("health_2")
+                        healths = Health_Player("health_4")
+                    elif 25 < player.hp <= 50:
+                        healths.kill()
+                        healths = Health_Player("health_3")
+                    elif 0 < player.hp <= 25:
+                        healths.kill()
+                        healths = Health_Player("health_2")
+
         if len(enemies_group) == 0:
             for spike in spikes_group:
                 if spike.rect.x >= 400:
