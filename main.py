@@ -214,8 +214,8 @@ health_player = {"health_1": load_image('ui (new)/health_ui.png', 250, 50),
                  "health_4": load_image('ui (new)/health_ui_4.png', 250, 50),
                  "health_5": load_image('ui (new)/health_ui_5.png', 250, 50)}
 
-enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png', 60, 60),
-           'enemie_slime': load_image('enemies/slime/slime_idle_anim_f0.png', 60, 60)}
+enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_run_spritesheet.png', 360, 60),
+           'enemie_slime': load_image('enemies/slime/slime_run_spritesheeet.png', 360, 60)}
 
 drop_objects = [load_image('props_itens\key_silver.png', 50, 50), load_image('props_itens\potion_green.png', 50, 50),
                 load_image('props_itens\potion_red.png', 50, 50), load_image('props_itens\potion_yellow.png', 50, 50)]
@@ -245,15 +245,6 @@ class Wall(Tile):
     def proverka(self, tile_type, rect):
         if tile_type in ["wall_1", "wall_2", "wall_3", "wall_crack"]:
             list_top.append(rect)
-            if number_location > 1:
-                if len(list_top) == 13:
-                    list_left.append(rect)
-                elif len(list_top) == 14:
-                    list_right.append(rect)
-            else:
-                if len(list_top) == 11:
-                    list_right.append(rect)
-        if tile_type == "wall_left":
             if number_location == 1:
                 if len(list_top) == 11:
                     list_right.append(rect)
@@ -262,6 +253,8 @@ class Wall(Tile):
                     list_left.append(rect)
                 elif rect.x >= 400:
                     list_right.append(rect)
+        if tile_type == "wall_left":
+            list_left.append(rect)
         elif tile_type == "wall_left" or tile_type == "wall_top_inner_left_2":
             list_left.append(rect)
         elif tile_type == "wall_bottom" or tile_type == "wall_bottom_left" or tile_type == "wall_bottom_right":
@@ -387,11 +380,9 @@ class Player(AnimatedSprite):
             self.hp -= amount
 
 
-class BaseEnemy(pygame.sprite.Sprite):
+class BaseEnemy(AnimatedSprite):
     def __init__(self, name_enemie, pos_x, pos_y):
-        super().__init__(enemies_group, all_sprites)
-        self.image = enemies[name_enemie]
-        self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x + 15, TOP_IND + tile_height * pos_y + 5)
+        super().__init__(enemies[name_enemie], 6, 1, LEFT_IND + tile_width * pos_x + 15, TOP_IND + tile_height * pos_y + 5, enemies_group)
         self.enemie_weapons = []
         self.eqip_weapon = 0
         self.hp = 30
@@ -468,11 +459,6 @@ running = True
 
 L_or_R_or_S = 'stay'
 while running:
-    # if
-    # player.frames = []
-    # player.cur_frame = 0
-    # player.cut_sheet(player_image_anim_stay, 6, 1)
-    # player_group.update()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -545,6 +531,7 @@ while running:
                 else:
                     enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
                     enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
+                enemie.update()
 
         if event.type == MYEVENTTYPE:
             for enemie in all_enemies:
