@@ -197,7 +197,7 @@ def final_screen():
         text = font.render(f"Количество убийств: {len(murders_numbers)}", True, (255, 62, 61))
         text_2 = font_2.render(f"Количество пройденных подземелий, локаций: {number_dungeon}, {number_location}", True, (255, 62, 61))
         now_date = datetime.datetime.today()
-        game_timer_2 = datetime.timedelta(days=now_date.day, hours=now_date.hour, minutes=now_date.minute,
+        game_timer_2 = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute,
                                           seconds=now_date.second)
         text_3 = font.render(f"Общее время: {game_timer_2 - game_timer}", True, (255, 62, 61))
         text_x = 113
@@ -215,7 +215,7 @@ def final_screen():
         text_2 = font_2.render(f"Количество пройденных подземелий, локаций: {number_dungeon}, {number_location}", True,
                                (255, 62, 61))
         now_date = datetime.datetime.today()
-        game_timer_2 = datetime.timedelta(days=now_date.day, hours=now_date.hour, minutes=now_date.minute,
+        game_timer_2 = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute,
                                           seconds=now_date.second)
         text_3 = font.render(f"Общее время: {game_timer_2 - game_timer}", True, (255, 62, 61))
         text_x = 113
@@ -389,7 +389,7 @@ class Player(pygame.sprite.Sprite):
         self.image = player_image_right
         self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x + 16, TOP_IND + tile_height * pos_y + 5)
         self.hp = 100
-        self.player_weapons = []
+        self.player_weapons = [sword_for_player]
         self.eqip_weapon = 0
 
     def hit(self, target):
@@ -502,14 +502,10 @@ drop_list = []
 f = open("save_data.txt", "r", encoding='utf-8')
 text = f.readlines()
 if len(text) > 0:
-    now_player = player[:]
-    for sprt in all_sprites:
-        if sprt not in player_group:
-            sprt.kill()
+    number_dungeon = int(text[0].strip())
+    number_location = int(text[1].strip())
     level = load_level(number_dungeon, number_location)
     player, goblins, level_x, level_y = generate_level(level)
-    player.kill()
-    player = now_player
     player.rect.x = 275
     player.rect.y = 351
     for goblin in goblins:
@@ -518,9 +514,9 @@ if len(text) > 0:
     running = True
 
     now_date = datetime.datetime.today()
-    day, hour, minute, second = map(int, str(text[3]).split(":"))
-    game_timer = datetime.timedelta(days=day, hours=hour, minutes=minute, seconds=second)
-    game_timer_2 = datetime.timedelta(days=now_date.day, hours=now_date.hour, minutes=now_date.minute,
+    hour, minute, second = map(int, str(text[2]).split(":"))
+    game_timer = datetime.timedelta(hours=hour, minutes=minute, seconds=second)
+    game_timer_2 = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute,
                                       seconds=now_date.second)
 else:
     level = load_level(number_dungeon, number_location)
@@ -531,9 +527,9 @@ else:
 
     now_date = datetime.datetime.today()
 
-    game_timer = datetime.timedelta(days=now_date.day, hours=now_date.hour, minutes=now_date.minute,
+    game_timer = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute,
                                     seconds=now_date.second)
-    game_timer_2 = datetime.timedelta(days=now_date.day, hours=now_date.hour, minutes=now_date.minute,
+    game_timer_2 = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute,
                                       seconds=now_date.second)
 
 while running:
@@ -544,8 +540,8 @@ while running:
             f.close()
             f = open("save_data.txt", "w+", encoding='utf-8')
             now_date = datetime.datetime.today()
-            date = datetime.timedelta(days=now_date.day, hours=now_date.hour, minutes=now_date.minute, seconds=now_date.second)
-            f.write(f"{str(number_dungeon)}\n{str(number_location)}\n{str(date - game_timer)} , {str(len(murders_numbers))}")
+            date = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute, seconds=now_date.second)
+            f.write(f"{str(number_dungeon)}\n{str(number_location)}\n{str(date - game_timer)}\n{str(len(murders_numbers))}")
             f.close()
             running = False
         elif event.type == pygame.KEYDOWN:
@@ -596,7 +592,7 @@ while running:
 
         for drops in drop_list:
             if drops.rect.colliderect(player.rect):
-                if drop_objects.index(drops.image) == 1:
+                if drop_objects.index(drops.image) == 0:
                     delta = random.choice([-25, 25])
                     player.hp += delta
                     if delta < 0:
@@ -613,12 +609,12 @@ while running:
                         healths.kill()
                         healths = Health_Player("health_2")
                     print("Вы подобрали зелье случайного изменения жизней")
-                elif drop_objects.index(drops.image) == 2:
+                elif drop_objects.index(drops.image) == 1:
                     player.hp = 100
                     healths.kill()
                     healths = Health_Player("health_5")
                     print("Вы подобрали зелье восстановления здоровья")
-                elif drop_objects.index(drops.image) == 3:
+                elif drop_objects.index(drops.image) == 2:
                     if player.eqip_weapon != 1:
                         sword_for_player_2 = Weapon('Меч', 20, 120)
                         player.add_weapon(sword_for_player_2)
