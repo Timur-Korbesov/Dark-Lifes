@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import datetime
 
 import pygame
 import random
@@ -17,6 +18,7 @@ LEFT_IND = 50
 TOP_IND = 50
 number_dungeon = 1
 number_location = 1
+murders_numbers = []
 
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -132,32 +134,103 @@ def terminate():
 
 
 def start_screen():
-    intro_text = ["", "",
-                  "",
-                  "",
-                  ""]
-
-    fon = pygame.transform.scale(load_image('full tilemap.png'), (WIDTH, HEIGHT))
+    fon = pygame.transform.scale(load_image('ui (new)/start_screen.png'), (WIDTH, HEIGHT))
     screen.blit(fon, (0, 0))
-    font = pygame.font.Font(None, 30)
-    text_coord = 50
     pygame.display.set_caption('Dark Lifes')
-    for line in intro_text:
-        string_rendered = font.render(line, 1, pygame.Color('black'))
-        intro_rect = string_rendered.get_rect()
-        text_coord += 10
-        intro_rect.top = text_coord
-        intro_rect.x = 10
-        text_coord += intro_rect.height
-        screen.blit(string_rendered, intro_rect)
+    font = pygame.font.Font(None, 70)
+    text = font.render("  PLAY", True, (255, 62, 61))
+    text_x = 480
+    text_y = 120
+    text_w = text.get_width()
+    text_h = text.get_height()
+    pygame.draw.rect(screen, (0, 28, 40), (text_x - 10, text_y - 10,
+                                           text_w + 50, text_h + 20), 0)
+    screen.blit(text, (text_x, text_y))
+    text_x_2 = 480
+    text_y_2 = 210
+    font = pygame.font.Font(None, 70)
+    text = font.render("  HELP", True, (255, 62, 61))
+    pygame.draw.rect(screen, (0, 28, 40), (text_x_2 - 10, text_y_2 - 10,
+                                           text_w + 50, text_h + 20), 0)
+    screen.blit(text, (text_x_2, text_y_2))
 
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
-            elif event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    if text_x - 10 <= event.pos[0] <= (text_x - 10) + (text_w + 50) and \
+                            text_y - 10 <= event.pos[1] <= (text_y - 10) + (text_h + 20):
+                        return
+                    elif text_x_2 - 10 <= event.pos[0] <= (text_x_2 - 10) + (text_w + 50) and \
+                            text_y_2 - 10 <= event.pos[1] <= (text_y_2 - 10) + (text_h + 20):
+                        help_screen()
+                        return
+        pygame.display.flip()
+        clock.tick(FPS)
 
-                return  # начинаем игру
+
+def help_screen():
+    fon = pygame.transform.scale(load_image('ui (new)/help_screen.png'), (WIDTH, HEIGHT))
+    screen.blit(fon, (0, 0))
+    pygame.display.set_caption('Dark Lifes')
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    start_screen()
+                    return
+        pygame.display.flip()
+        clock.tick(FPS)
+
+
+def final_screen():
+    if player.hp > 0:
+        fon = pygame.transform.scale(load_image('ui (new)/final_screen_win.png'), (WIDTH, HEIGHT))
+        screen.blit(fon, (0, 0))
+        pygame.display.set_caption('Dark Lifes')
+        font = pygame.font.Font(None, 50)
+        font_2 = pygame.font.Font(None, 30)
+        text = font.render(f"Количество убийств: {len(murders_numbers)}", True, (255, 62, 61))
+        text_2 = font_2.render(f"Количество пройденных подземелий, локаций: {number_dungeon}, {number_location}", True, (255, 62, 61))
+        now_date = datetime.datetime.today()
+        game_timer_2 = datetime.timedelta(days=now_date.day, hours=now_date.hour, minutes=now_date.minute,
+                                          seconds=now_date.second)
+        text_3 = font.render(f"Общее время: {game_timer_2 - game_timer}", True, (255, 62, 61))
+        text_x = 113
+        text_y = 236
+        screen.blit(text, (text_x, text_y))
+        screen.blit(text_2, (text_x, text_y + 60))
+        screen.blit(text_3, (text_x, text_y + 120))
+    else:
+        fon = pygame.transform.scale(load_image('ui (new)/final_screen_over.png'), (WIDTH, HEIGHT))
+        screen.blit(fon, (0, 0))
+        pygame.display.set_caption('Dark Lifes')
+        font = pygame.font.Font(None, 50)
+        font_2 = pygame.font.Font(None, 30)
+        text = font.render(f"Количество убийств: {len(murders_numbers)}", True, (255, 62, 61))
+        text_2 = font_2.render(f"Количество пройденных подземелий, локаций: {number_dungeon}, {number_location}", True,
+                               (255, 62, 61))
+        now_date = datetime.datetime.today()
+        game_timer_2 = datetime.timedelta(days=now_date.day, hours=now_date.hour, minutes=now_date.minute,
+                                          seconds=now_date.second)
+        text_3 = font.render(f"Общее время: {game_timer_2 - game_timer}", True, (255, 62, 61))
+        text_x = 113
+        text_y = 236
+        screen.blit(text, (text_x, text_y))
+        screen.blit(text_2, (text_x, text_y + 60))
+        screen.blit(text_3, (text_x, text_y + 120))
+
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.KEYDOWN:
+                pass
         pygame.display.flip()
         clock.tick(FPS)
 
@@ -215,7 +288,7 @@ health_player = {"health_1": load_image('ui (new)/health_ui.png', 250, 50),
 enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png', 60, 60),
            'enemie_slime': load_image('enemies/slime/slime_idle_anim_f0.png', 60, 60)}
 
-drop_objects = [load_image('props_itens\key_silver.png', 50, 50), load_image('props_itens\potion_green.png', 50, 50),
+drop_objects = [load_image('props_itens\potion_green.png', 50, 50),
                 load_image('props_itens\potion_red.png', 50, 50), load_image('props_itens\potion_yellow.png', 50, 50)]
 
 flag_moves_enemys = True
@@ -273,6 +346,7 @@ class Spikes(pygame.sprite.Sprite):
         list_left.append(self.rect)
 
 
+
 class Weapon:
     def __init__(self, name, damage, range):
         self.name = name
@@ -289,15 +363,17 @@ class Weapon:
             target.hp -= self.damage
             if not target.is_alive():
                 if isinstance(target, BaseEnemy):
-                    selection = random.choice(["+"])
+                    selection = random.choice(["+", "-", "+", "-"])
                     if selection == "+":
                         x, y = target.rect.x, target.rect.y
-                        drop = DropableObjects(drop_objects[3], x, y)
+                        drop = DropableObjects(random.choice(drop_objects), x, y)
                         drop_list.append(drop)
                     target.kill()
                     goblins.remove(target)
+                    murders_numbers.append(1)
                 else:
                     target.kill()
+                    final_screen()
             print(target.hp)
         else:
             print(f'Враг слишком далеко для оружия {self.name}')
@@ -417,20 +493,60 @@ pygame.time.set_timer(ENEMIEGOEVENT, 100)
 MYEVENTTYPE = pygame.USEREVENT + 1
 pygame.time.set_timer(MYEVENTTYPE, 1000)
 SUPERSWORD = pygame.USEREVENT + 2
+GAMETIMER = pygame.USEREVENT + 2
 
 time_flag = True
 
 drop_list = []
 
-level = load_level(number_dungeon, number_location)
-player, goblins, level_x, level_y = generate_level(level)
-player.add_weapon(sword_for_player)
-camera = Camera((level_x, level_y))
+f = open("save_data.txt", "r", encoding='utf-8')
+text = f.readlines()
+if len(text) > 0:
+    now_player = player[:]
+    for sprt in all_sprites:
+        if sprt not in player_group:
+            sprt.kill()
+    level = load_level(number_dungeon, number_location)
+    player, goblins, level_x, level_y = generate_level(level)
+    player.kill()
+    player = now_player
+    player.rect.x = 275
+    player.rect.y = 351
+    for goblin in goblins:
+        goblin.add_weapon(sword_for_goblin)
+    camera = Camera((level_x, level_y))
+    running = True
 
-running = True
+    now_date = datetime.datetime.today()
+    day, hour, minute, second = map(int, str(text[3]).split(":"))
+    game_timer = datetime.timedelta(days=day, hours=hour, minutes=minute, seconds=second)
+    game_timer_2 = datetime.timedelta(days=now_date.day, hours=now_date.hour, minutes=now_date.minute,
+                                      seconds=now_date.second)
+else:
+    level = load_level(number_dungeon, number_location)
+    player, goblins, level_x, level_y = generate_level(level)
+    player.add_weapon(sword_for_player)
+    camera = Camera((level_x, level_y))
+    running = True
+
+    now_date = datetime.datetime.today()
+
+    game_timer = datetime.timedelta(days=now_date.day, hours=now_date.hour, minutes=now_date.minute,
+                                    seconds=now_date.second)
+    game_timer_2 = datetime.timedelta(days=now_date.day, hours=now_date.hour, minutes=now_date.minute,
+                                      seconds=now_date.second)
+
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
+            f = open("save_data.txt", "r+", encoding='utf-8')
+            f.truncate()
+            f.close()
+            f = open("save_data.txt", "w+", encoding='utf-8')
+            now_date = datetime.datetime.today()
+            date = datetime.timedelta(days=now_date.day, hours=now_date.hour, minutes=now_date.minute, seconds=now_date.second)
+            f.write(f"{str(number_dungeon)}\n{str(number_location)}\n{str(date - game_timer)} , {str(len(murders_numbers))}")
+            f.close()
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT or event.key == pygame.K_a:
@@ -473,7 +589,6 @@ while running:
         if time_flag and player.eqip_weapon == 1:
             time_flag = False
             pygame.time.set_timer(SUPERSWORD, 10000)
-
 
         if player.eqip_weapon == 1 and event.type == SUPERSWORD:
             player.eqip_weapon = 0
@@ -570,7 +685,8 @@ while running:
                 player, goblins, level_x, level_y = generate_level(level)
                 player.kill()
                 player = now_player
-                player.rect.x = 230
+                player.rect.x = 275
+                player.rect.y = 351
                 for goblin in goblins:
                     goblin.add_weapon(sword_for_goblin)
                 camera = Camera((level_x, level_y))
