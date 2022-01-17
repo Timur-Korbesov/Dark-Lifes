@@ -18,8 +18,8 @@ LEFT_IND = 50
 TOP_IND = 50
 number_dungeon = 1
 number_location = 1
+final_flag = False
 murders_numbers = []
-
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
@@ -162,6 +162,10 @@ def start_screen():
                 if event.button == 1:
                     if text_x - 10 <= event.pos[0] <= (text_x - 10) + (text_w + 50) and \
                             text_y - 10 <= event.pos[1] <= (text_y - 10) + (text_h + 20):
+                        if final_flag:
+                            file = open("save_data.txt", "r+", encoding='utf-8')
+                            file.truncate()
+                            file.close()
                         return
                     elif text_x_2 - 10 <= event.pos[0] <= (text_x_2 - 10) + (text_w + 50) and \
                             text_y_2 - 10 <= event.pos[1] <= (text_y_2 - 10) + (text_h + 20):
@@ -188,24 +192,33 @@ def help_screen():
 
 
 def final_screen():
+    global final_flag, number_dungeon, number_location, player, healths
     if player.hp > 0:
+        final_flag = True
         fon = pygame.transform.scale(load_image('ui (new)/final_screen_win.png'), (WIDTH, HEIGHT))
         screen.blit(fon, (0, 0))
         pygame.display.set_caption('Dark Lifes')
         font = pygame.font.Font(None, 50)
         font_2 = pygame.font.Font(None, 30)
         text = font.render(f"Количество убийств: {len(murders_numbers)}", True, (255, 62, 61))
-        text_2 = font_2.render(f"Количество пройденных подземелий, локаций: {number_dungeon}, {number_location}", True, (255, 62, 61))
+        text_2 = font_2.render(f"Количество пройденных подземелий, локаций: {number_dungeon}, {number_location}", True,
+                               (255, 62, 61))
         now_date = datetime.datetime.today()
         game_timer_2 = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute,
                                           seconds=now_date.second)
-        text_3 = font.render(f"Общее время: {game_timer_2 - game_timer}", True, (255, 62, 61))
+        if delta != 0:
+            text_3 = font.render(f"Общее время: {game_timer_2 - game_timer + deltas}", True, (255, 62, 61))
+        else:
+            text_3 = font.render(f"Общее время: {game_timer_2 - game_timer}", True, (255, 62, 61))
         text_x = 113
         text_y = 236
+        text_4 = font.render(f'Нажмите "Enter"', True, (255, 62, 61))
         screen.blit(text, (text_x, text_y))
         screen.blit(text_2, (text_x, text_y + 60))
         screen.blit(text_3, (text_x, text_y + 120))
+        screen.blit(text_4, (text_x, text_y + 180))
     else:
+        final_flag = True
         fon = pygame.transform.scale(load_image('ui (new)/final_screen_over.png'), (WIDTH, HEIGHT))
         screen.blit(fon, (0, 0))
         pygame.display.set_caption('Dark Lifes')
@@ -217,20 +230,51 @@ def final_screen():
         now_date = datetime.datetime.today()
         game_timer_2 = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute,
                                           seconds=now_date.second)
-        text_3 = font.render(f"Общее время: {game_timer_2 - game_timer}", True, (255, 62, 61))
+        if deltas != 0:
+            text_3 = font.render(f"Общее время: {game_timer_2 - game_timer + deltas}", True, (255, 62, 61))
+        else:
+            text_3 = font.render(f"Общее время: {game_timer_2 - game_timer}", True, (255, 62, 61))
         text_x = 113
         text_y = 236
+        font_3 = pygame.font.Font(None, 30)
+        text_4 = font_3.render(f'Нажмите "Пробел", если хотите выйти в главное меню', True, (255, 62, 61))
+        text_5 = font_3.render(f'Нажмите "B", если хотите начать заново', True, (255, 62, 61))
         screen.blit(text, (text_x, text_y))
         screen.blit(text_2, (text_x, text_y + 60))
         screen.blit(text_3, (text_x, text_y + 120))
-
+        screen.blit(text_4, (text_x, text_y + 180))
+        screen.blit(text_5, (text_x, text_y + 240))
 
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
             elif event.type == pygame.KEYDOWN:
-                pass
+                if event.key == pygame.K_SPACE:
+                    start_screen()
+                    number_dungeon = 1
+                    number_location = 1
+                    player.hp = 100
+                    for sprt in all_sprites:
+                        if sprt not in player_group:
+                            sprt.kill()
+                    level = load_level(number_dungeon, number_location)
+                    player, goblins, level_x, level_y = generate_level(level)
+                    player.kill()
+                    player = now_player
+                    player.rect.x = 275
+                    player.rect.y = 351
+                    for goblin in goblins:
+                        goblin.add_weapon(sword_for_goblin)
+                    camera = Camera((level_x, level_y))
+                    healths.kill()
+                    healths = Health_Player("health_5")
+                    return
+                elif event.key == pygame.K_b:
+                    number_dungeon = 1
+                    number_location = 1
+                    player.hp = 100
+
         pygame.display.flip()
         clock.tick(FPS)
 
@@ -318,6 +362,7 @@ class Wall(Tile):
     def proverka(self, tile_type, rect):
         if tile_type in ["wall_1", "wall_2", "wall_3", "wall_crack"]:
             list_top.append(rect)
+            list_left.append(rect)
             if len(list_top) == 11:
                 list_right.append(rect)
         if tile_type == "wall_left":
@@ -328,6 +373,9 @@ class Wall(Tile):
             list_right.append(rect)
         if tile_type == "wall_top_inner_right_2":
             list_right.append(rect)
+            list_left.append(rect)
+        if tile_type == "wall_top":
+            list_left.append(rect)
 
 
 class Health_Player(pygame.sprite.Sprite):
@@ -344,7 +392,6 @@ class Spikes(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x, TOP_IND + tile_height * pos_y)
         list_right.append(self.rect)
         list_left.append(self.rect)
-
 
 
 class Weapon:
@@ -380,7 +427,6 @@ class Weapon:
 
     def __str__(self):
         return self.name
-
 
 
 class Player(pygame.sprite.Sprite):
@@ -495,6 +541,7 @@ pygame.time.set_timer(MYEVENTTYPE, 1000)
 SUPERSWORD = pygame.USEREVENT + 2
 GAMETIMER = pygame.USEREVENT + 2
 
+
 time_flag = True
 
 drop_list = []
@@ -506,6 +553,16 @@ if len(text) > 0:
     number_location = int(text[1].strip())
     level = load_level(number_dungeon, number_location)
     player, goblins, level_x, level_y = generate_level(level)
+    player.hp = int(text[4].strip())
+    if 50 < player.hp <= 75:
+        healths.kill()
+        healths = Health_Player("health_4")
+    elif 25 < player.hp <= 50:
+        healths.kill()
+        healths = Health_Player("health_3")
+    elif 0 < player.hp <= 25:
+        healths.kill()
+        healths = Health_Player("health_2")
     player.rect.x = 275
     player.rect.y = 351
     for goblin in goblins:
@@ -515,7 +572,10 @@ if len(text) > 0:
 
     now_date = datetime.datetime.today()
     hour, minute, second = map(int, str(text[2]).split(":"))
-    game_timer = datetime.timedelta(hours=hour, minutes=minute, seconds=second)
+    f.close()
+    murders_numbers = [1 for i in range(int(text[3].strip()))]
+    deltas = datetime.timedelta(hours=hour, minutes=minute, seconds=second)
+    game_timer = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute, seconds=now_date.second)
     game_timer_2 = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute,
                                       seconds=now_date.second)
 else:
@@ -524,6 +584,8 @@ else:
     player.add_weapon(sword_for_player)
     camera = Camera((level_x, level_y))
     running = True
+    deltas = 0
+    player.hp = 100
 
     now_date = datetime.datetime.today()
 
@@ -535,14 +597,17 @@ else:
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            f = open("save_data.txt", "r+", encoding='utf-8')
-            f.truncate()
-            f.close()
-            f = open("save_data.txt", "w+", encoding='utf-8')
-            now_date = datetime.datetime.today()
-            date = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute, seconds=now_date.second)
-            f.write(f"{str(number_dungeon)}\n{str(number_location)}\n{str(date - game_timer)}\n{str(len(murders_numbers))}")
-            f.close()
+            if not final_flag:
+                f = open("save_data.txt", "r+", encoding='utf-8')
+                f.truncate()
+                f.close()
+                f = open("save_data.txt", "w+", encoding='utf-8')
+                dates = datetime.datetime.today()
+                date = datetime.timedelta(hours=dates.hour, minutes=dates.minute, seconds=int(dates.second))
+                f.write(
+                    f"{str(number_dungeon)}\n{str(number_location)}\n{str(date - game_timer)}\n{str(len(murders_numbers))}\n{str(player.hp)}")
+                f.close()
+            final_flag = False
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT or event.key == pygame.K_a:
@@ -642,14 +707,7 @@ while running:
         if event.type == MYEVENTTYPE:
             for goblin in goblins:
                 goblin.hit(player)
-                if not player.is_alive():
-                    player.hp = 100
-                    player = Player(5, 5)
-                    player.hp = 100
-                    healths.kill()
-                    healths = Health_Player("health_5")
-                    player.add_weapon(sword_for_player)
-                else:
+                if player.is_alive():
                     if 50 < player.hp <= 75:
                         healths.kill()
                         healths = Health_Player("health_4")
