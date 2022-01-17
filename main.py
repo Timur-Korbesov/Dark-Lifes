@@ -345,7 +345,7 @@ def main_play():
     MYEVENTTYPE = pygame.USEREVENT + 2
     pygame.time.set_timer(MYEVENTTYPE, 1200)
     SUPERSWORD = pygame.USEREVENT + 3
-    pygame.time.set_timer(SUPERSWORD, 10000)
+    pygame.time.set_timer(SUPERSWORD, 5000)
     #
     # Тимур
     while running:
