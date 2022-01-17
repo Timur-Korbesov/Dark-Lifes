@@ -29,7 +29,7 @@ class Wall(Tile):
     def proverka(self, tile_type, rect):
         if tile_type in ["wall_1", "wall_2", "wall_3", "wall_crack"]:
             list_top.append(rect)
-            if number_location == 1:
+            if number_location == 1 and number_dungeon == 1:
                 if len(list_top) == 11:
                     list_right.append(rect)
             else:
