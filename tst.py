@@ -18,8 +18,6 @@ LEFT_IND = 50
 TOP_IND = 50
 number_dungeon = 1
 number_location = 1
-final_flag = False
-murders_numbers = []
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
@@ -104,7 +102,6 @@ def generate_level(level):
             elif level[y][x] == ':':
                 Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
                 Wall('wall_bottom_right', x, y - 1)
-
             elif level[y][x] == '#':
                 Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
                 Wall('wall_top', x, y - 1)
@@ -123,9 +120,6 @@ def generate_level(level):
             elif level[y][x] == '&':
                 Tile('floor_1', x, y)
                 new_enemies.append(Enemie_Slime(x, y))
-
-    # вернем игрока, а также размер поля в клетках
-    return new_player, new_enemies, x, y
 
 
 def terminate():
@@ -410,14 +404,12 @@ class Weapon:
             target.hp -= self.damage
             if not target.is_alive():
                 if isinstance(target, BaseEnemy):
-                    selection = random.choice(["+", "-", "+", "-"])
                     if selection == "+":
                         x, y = target.rect.x, target.rect.y
                         drop = DropableObjects(random.choice(drop_objects), x, y)
                         drop_list.append(drop)
                     target.kill()
-                    goblins.remove(target)
-                    murders_numbers.append(1)
+                   goblins.remove(target)
                 else:
                     target.kill()
                     final_screen()
@@ -427,6 +419,7 @@ class Weapon:
 
     def __str__(self):
         return self.name
+
 
 
 class Player(pygame.sprite.Sprite):
@@ -495,7 +488,6 @@ class BaseEnemy(pygame.sprite.Sprite):
 
 
 class Enemie_Goblin(BaseEnemy):
-    def __init__(self, pos_x, pos_y):
         super().__init__('enemie_goblin', pos_x, pos_y)
         self.enemie_weapons.append(sword_for_goblin)
         self.hp = 50
@@ -538,61 +530,6 @@ ENEMIEGOEVENT = pygame.USEREVENT + 1
 pygame.time.set_timer(ENEMIEGOEVENT, 100)
 MYEVENTTYPE = pygame.USEREVENT + 1
 pygame.time.set_timer(MYEVENTTYPE, 1000)
-SUPERSWORD = pygame.USEREVENT + 2
-GAMETIMER = pygame.USEREVENT + 2
-
-
-time_flag = True
-
-drop_list = []
-
-f = open("save_data.txt", "r", encoding='utf-8')
-text = f.readlines()
-if len(text) > 0:
-    number_dungeon = int(text[0].strip())
-    number_location = int(text[1].strip())
-    level = load_level(number_dungeon, number_location)
-    player, goblins, level_x, level_y = generate_level(level)
-    player.hp = int(text[4].strip())
-    if 50 < player.hp <= 75:
-        healths.kill()
-        healths = Health_Player("health_4")
-    elif 25 < player.hp <= 50:
-        healths.kill()
-        healths = Health_Player("health_3")
-    elif 0 < player.hp <= 25:
-        healths.kill()
-        healths = Health_Player("health_2")
-    player.rect.x = 275
-    player.rect.y = 351
-    for goblin in goblins:
-        goblin.add_weapon(sword_for_goblin)
-    camera = Camera((level_x, level_y))
-    running = True
-
-    now_date = datetime.datetime.today()
-    hour, minute, second = map(int, str(text[2]).split(":"))
-    f.close()
-    murders_numbers = [1 for i in range(int(text[3].strip()))]
-    deltas = datetime.timedelta(hours=hour, minutes=minute, seconds=second)
-    game_timer = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute, seconds=now_date.second)
-    game_timer_2 = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute,
-                                      seconds=now_date.second)
-else:
-    level = load_level(number_dungeon, number_location)
-    player, goblins, level_x, level_y = generate_level(level)
-    player.add_weapon(sword_for_player)
-    camera = Camera((level_x, level_y))
-    running = True
-    deltas = 0
-    player.hp = 100
-
-    now_date = datetime.datetime.today()
-
-    game_timer = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute,
-                                    seconds=now_date.second)
-    game_timer_2 = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute,
-                                      seconds=now_date.second)
 
 while running:
     for event in pygame.event.get():
@@ -674,7 +611,9 @@ while running:
                         healths.kill()
                         healths = Health_Player("health_2")
                     print("Вы подобрали зелье случайного изменения жизней")
-                elif drop_objects.index(drops.image) == 1:
+ for drops in drop_list:
+            if drops.rect.colliderect(player.rect):
+                if drop_objects.index(drops.image) == 2:
                     player.hp = 100
                     healths.kill()
                     healths = Health_Player("health_5")
