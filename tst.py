@@ -15,6 +15,9 @@ STEP = 30
 STEPEN = 10
 LEFT_IND = 50
 TOP_IND = 50
+number_dungeon = 1
+number_location = 1
+
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
@@ -27,7 +30,6 @@ player_group = pygame.sprite.Group()
 enemies_group = pygame.sprite.Group()
 healths_group = pygame.sprite.Group()
 dropable_group = pygame.sprite.Group()
-all_enemies = []
 
 
 def load_image(name, width=None, height=None, colorkey=None):
@@ -49,8 +51,9 @@ def load_image(name, width=None, height=None, colorkey=None):
     return image
 
 
-def load_level(filename):
-    filename = "data/" + filename
+def load_level(number_dungeon, number_location):
+    filename = "data/dungeons/dungeon_" + str(number_dungeon) + '/location_' + str(number_location) + '.txt'
+
     # читаем уровень, убирая символы перевода строки
     with open(filename, 'r') as mapFile:
         level_map = [line.strip() for line in mapFile]
@@ -60,7 +63,7 @@ def load_level(filename):
 
 
 def generate_level(level):
-    new_player, new_enemie_goblin, x, y = None, [], None, None
+    new_player, new_enemies, x, y = None, [], None, None
     for y in range(len(level)):
         for x in range(len(level[y])):
             # Floors
@@ -70,7 +73,7 @@ def generate_level(level):
 
             # Doors
             elif level[y][x] == '*':
-                Tile('spikes', x, y)
+                Spikes(x, y)
 
             elif level[y][x] == '[':
                 Wall('wall_left', x, y - 1)
@@ -91,13 +94,21 @@ def generate_level(level):
                 Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
                 Wall('wall_top_inner_right_2', x, y - 1)
             elif level[y][x] == '>':
+                Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
                 Wall('wall_bottom_left', x, y - 1)
 
+            elif level[y][x] == ';':
+                Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
+                Wall('wall_top_inner_left_2', x, y - 1)
+            elif level[y][x] == ':':
+                Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
+                Wall('wall_bottom_right', x, y - 1)
             elif level[y][x] == '#':
                 Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
                 Wall('wall_top', x, y - 1)
 
             elif level[y][x] == '+':
+                Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
                 Wall('wall_bottom', x, y - 1)
             # Hero
             elif level[y][x] == '@':
@@ -106,10 +117,13 @@ def generate_level(level):
             # Enemies
             elif level[y][x] == '!':
                 Tile('floor_1', x, y)
-                new_enemie_goblin.append(Enemie_Goblin('enemie_goblin', x, y))
-
+                new_enemies.append(Enemie_Goblin(x, y))
+            elif level[y][x] == '&':
+                Tile('floor_1', x, y)
+                new_enemies.append(Enemie_Slime(x, y))
     # вернем игрока, а также размер поля в клетках
-    return new_player, new_enemie_goblin, x, y
+    return new_player, new_enemies, x, y
+
 
 
 def terminate():
@@ -158,6 +172,7 @@ tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
                'wall_bottom': load_image('tiles/wall/wall_bottom.png', 60, 60),
 
                'wall_bottom_left': load_image('tiles/wall/wall_bottom_left.png', 60, 60),
+               'wall_bottom_right': load_image('tiles/wall/wall_bottom_right.png', 60, 60),
 
                'wall_side_left_top': load_image('tiles/wall/wall_top_inner_left.png', 60, 60),
                'wall_side_right_top': load_image('tiles/wall/wall_top_inner_right.png', 60, 60),
@@ -165,6 +180,7 @@ tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
                'wall_side_right_bottom': load_image('tiles/wall/wall_bottom_inner_right.png', 60, 60),
 
                'wall_top_inner_right_2': load_image('tiles/wall/wall_top_inner_right_2.png', 60, 60),
+               'wall_top_inner_left_2': load_image('tiles/wall/wall_top_inner_left_2.png', 60, 60),
 
                'wall_1': load_image('tiles/wall/wall_1.png', 60, 60),
                'wall_2': load_image('tiles/wall/wall_2.png', 60, 60),
@@ -181,21 +197,27 @@ tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
                'floor_8': load_image('tiles/floor/floor_8.png', 60, 60),
                'floor_9': load_image('tiles/floor/floor_9.png', 60, 60),
 
-               'spikes': load_image('tiles/floor/spikes_anim_f9.png', 60, 60),
                'door': load_image('tiles/wall/door_anim_opening_f0.png', 60, 60)}
 
 player_image_right = load_image('heroes/knight/knight_idle_anim_f0.png', 60, 60)
 player_image_left = pygame.transform.flip(player_image_right, True, False)
+
+spikes_up = load_image('tiles/floor/spikes_anim_f9.png', 60, 60)
+spikes_down = load_image('tiles/floor/spikes_anim_f0.png', 60, 60)
+
 health_player = {"health_1": load_image('ui (new)/health_ui.png', 250, 50),
                  "health_2": load_image('ui (new)/health_ui_2.png', 250, 50),
                  "health_3": load_image('ui (new)/health_ui_3.png', 250, 50),
                  "health_4": load_image('ui (new)/health_ui_4.png', 250, 50),
                  "health_5": load_image('ui (new)/health_ui_5.png', 250, 50)}
 
-enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png', 60, 60)}
+enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png', 60, 60),
+           'enemie_slime': load_image('enemies/slime/slime_idle_anim_f0.png', 60, 60)}
 
 drop_objects = [load_image('props_itens\key_silver.png', 50, 50), load_image('props_itens\potion_green.png', 50, 50),
                 load_image('props_itens\potion_red.png', 50, 50), load_image('props_itens\potion_yellow.png', 50, 50)]
+
+flag_moves_enemys = True
 
 tile_width = tile_height = 60
 
@@ -212,7 +234,6 @@ class Tile(pygame.sprite.Sprite):
         super().__init__(tiles_group, all_sprites)
         self.image = tile_images[tile_type]
         self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x, TOP_IND + tile_height * pos_y)
-
 
 
 class Wall(Tile):
@@ -242,9 +263,13 @@ class Health_Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(10, 10)
 
 
-class Spikes(Tile):
-    def __init__(self, tile_type, pos_x, pos_y):
-        super().__init__(tile_type, pos_x, pos_y)
+class Spikes(pygame.sprite.Sprite):
+    def __init__(self, pos_x, pos_y):
+        super().__init__(spikes_group, all_sprites)
+        self.image = spikes_up
+        self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x, TOP_IND + tile_height * pos_y)
+        list_right.append(self.rect)
+        list_left.append(self.rect)
 
 
 class Weapon:
@@ -263,11 +288,13 @@ class Weapon:
             target.hp -= self.damage
             if not target.is_alive():
                 if isinstance(target, BaseEnemy):
-                    selection = random.choice(["-", "+", "-", "+", "-"])
+                    selection = random.choice(["-", "+"])
                     if selection == "+":
                         x, y = target.rect.x, target.rect.y
-                        DropableObjects(random.choice(drop_objects), x, y)
+                        drop = DropableObjects(random.choice(drop_objects), x, y)
+                        drop_list.append(drop)
                     target.kill()
+                    goblins.remove(target)
                 else:
                     target.kill()
             print(target.hp)
@@ -276,6 +303,7 @@ class Weapon:
 
     def __str__(self):
         return self.name
+
 
 
 class Player(pygame.sprite.Sprite):
@@ -321,7 +349,7 @@ class BaseEnemy(pygame.sprite.Sprite):
         super().__init__(enemies_group, all_sprites)
         self.image = enemies[name_enemie]
         self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x + 15, TOP_IND + tile_height * pos_y + 5)
-        self.goblin_weapons = []
+        self.enemie_weapons = []
         self.eqip_weapon = 0
         self.hp = 30
 
@@ -334,19 +362,26 @@ class BaseEnemy(pygame.sprite.Sprite):
 
     def add_weapon(self, weapon):
         if isinstance(weapon, Weapon):
-            self.goblin_weapons.append(weapon)
+            self.enemie_weapons.append(weapon)
             print('Подобрал', weapon, "(гоблин)")
         else:
             print('Это не оружие')
 
     def hit(self, target):
-        self.goblin_weapons[self.eqip_weapon].hit(self, target)
-
+        self.enemie_weapons[self.eqip_weapon].hit(self, target)
 
 
 class Enemie_Goblin(BaseEnemy):
-    def __init__(self, name_enemie, pos_x, pos_y):
-        super().__init__(name_enemie, pos_x, pos_y)
+    def __init__(self, pos_x, pos_y)
+        super().__init__('enemie_goblin', pos_x, pos_y)
+        self.enemie_weapons.append(sword_for_goblin)
+        self.hp = 50
+
+
+class Enemie_Slime(BaseEnemy):
+    def __init__(self, pos_x, pos_y):
+        super().__init__('enemie_slime', pos_x, pos_y)
+        self.enemie_weapons.append(slize_for_slime)
 
 
 class Camera:
@@ -368,22 +403,25 @@ class Camera:
 
 
 start_screen()
-level = load_level("level_1.txt")
-player, goblins, level_x, level_y = generate_level(level)
-camera = Camera((level_x, level_y))
+
 pygame.display.set_caption('Dark Lifes')
 # Оружия
 sword_for_player = Weapon('Меч', 10, 100)
-player.add_weapon(sword_for_player)
-sword_for_enemy = Weapon('Меч', 4, 100)
-for goblin in goblins:
-    goblin.add_weapon(sword_for_enemy)
+sword_for_goblin = Weapon('Меч', 8, 100)
+slize_for_slime = Weapon('Меч', 4, 100)
 healths = Health_Player("health_5")
 # Таймеры
 ENEMIEGOEVENT = pygame.USEREVENT + 1
 pygame.time.set_timer(ENEMIEGOEVENT, 100)
 MYEVENTTYPE = pygame.USEREVENT + 1
-pygame.time.set_timer(MYEVENTTYPE, 450)
+pygame.time.set_timer(MYEVENTTYPE, 1000)
+
+drop_list = []
+
+level = load_level(number_dungeon, number_location)
+player, goblins, level_x, level_y = generate_level(level)
+player.add_weapon(sword_for_player)
+camera = Camera((level_x, level_y))
 
 running = True
 while running:
@@ -391,14 +429,14 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
+            if event.key == pygame.K_LEFT or event.key == pygame.K_a:
                 player.image = player_image_left
                 for lt in list_left:
                     if player.rect.collidepoint(lt.bottomright):
                         break
                 else:
                     player.rect.x -= STEP
-            if event.key == pygame.K_RIGHT:
+            if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                 player.image = player_image_right
                 for r in list_right:
                     if list_right[0] == r:
@@ -410,13 +448,13 @@ while running:
                             break
                 else:
                     player.rect.x += STEP
-            if event.key == pygame.K_UP:
+            if event.key == pygame.K_UP or event.key == pygame.K_w:
                 for h in list_top:
                     if player.rect.collidepoint(h.center[0], h.center[1] + 10):
                         break
                 else:
                     player.rect.y -= STEP
-            if event.key == pygame.K_DOWN:
+            if event.key == pygame.K_DOWN or event.key == pygame.K_s:
                 for b in list_bottom:
                     if player.rect.collidepoint(b.top + 30, b.left):
                         break
@@ -427,6 +465,17 @@ while running:
             if event.button == 1:
                 for enemie in enemies_group:
                     player.hit(enemie)
+        for drops in drop_list:
+            if drops.rect.colliderect(player.rect):
+                if drop_objects.index(drops.image) == 2:
+                    player.hp = 100
+                    healths.kill()
+                    healths = Health_Player("health_5")
+                    print("Вы подобрали зелье восстановления здоровья")
+                elif drop_objects.index(drops.image) == 3:
+                    pass
+                drops.kill()
+                drop_list.remove(drops)
         for enemie in enemies_group:
             if event.type == ENEMIEGOEVENT:
                 player_x, player_y = player.rect.x, player.rect.y
@@ -442,40 +491,67 @@ while running:
                     if player_y + STEPEN * 2 - 10 <= enemie_y:
                         enemie.rect.y -= STEPEN
                 else:
-                    enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN*2, STEPEN*2])
-                    enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN*2, STEPEN*2])
-            if event.type == MYEVENTTYPE:
-                for goblin in goblins:
-                    goblin.hit(player)
-                    if not player.is_alive():
-                        player.hp = 100
-                        player = Player(5, 5)
-                        player.hp = 100
+                    enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
+                    enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
+        if event.type == MYEVENTTYPE:
+            for goblin in goblins:
+                goblin.hit(player)
+                if not player.is_alive():
+                    player.hp = 100
+                    player = Player(5, 5)
+                    player.hp = 100
+                    healths.kill()
+                    healths = Health_Player("health_5")
+                    player.add_weapon(sword_for_player)
+                else:
+                    if 50 < player.hp <= 75:
                         healths.kill()
-                        healths = Health_Player("health_5")
-                        player.add_weapon(sword_for_player)
-                    else:
-                        if 50 < player.hp <= 75:
-                            healths.kill()
-                            healths = Health_Player("health_4")
-                        elif 25 < player.hp <= 50:
-                            healths.kill()
-                            healths = Health_Player("health_3")
-                        elif 0 < player.hp <= 25:
-                            healths.kill()
-                            healths = Health_Player("health_2")
+                        healths = Health_Player("health_4")
+                    elif 25 < player.hp <= 50:
+                        healths.kill()
+                        healths = Health_Player("health_3")
+                    elif 0 < player.hp <= 25:
+                        healths.kill()
+                        healths = Health_Player("health_2")
+        if len(enemies_group) == 0:
+            for spike in spikes_group:
+                if spike.rect.x >= 400:
+                    spike.image = spikes_down
+                    try:
+                        list_right.remove(spike)
+                        list_left.remove(spike)
+                    except:
+                        pass
+            ans = pygame.sprite.spritecollide(player, spikes_group, False)
+            if len(ans) >= 4:
+                number_location += 1
+                if number_location > 10:
+                    number_dungeon += 1
+                now_player = player
+                for sprt in all_sprites:
+                    if sprt not in player_group:
+                        sprt.kill()
+                level = load_level(number_dungeon, number_location)
+                player, goblins, level_x, level_y = generate_level(level)
+                player.kill()
+                player = now_player
+                player.rect.x = 230
+                for goblin in goblins:
+                    goblin.add_weapon(sword_for_goblin)
+                camera = Camera((level_x, level_y))
 
     camera.update(player)
 
     for sprite in all_sprites:
         camera.apply(sprite)
 
-    screen.fill(pygame.Color(181, 83, 83))
+    screen.fill(pygame.Color(124, 72, 36))
+    spikes_group.draw(screen)
     tiles_group.draw(screen)
     enemies_group.draw(screen)
+    dropable_group.draw(screen)
     player_group.draw(screen)
     healths_group.draw(screen)
-    dropable_group.draw(screen)
     pygame.display.flip()
 
     clock.tick(FPS)

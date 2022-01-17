@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 
 import pygame
 import random
@@ -29,6 +28,7 @@ player_group = pygame.sprite.Group()
 enemies_group = pygame.sprite.Group()
 healths_group = pygame.sprite.Group()
 dropable_group = pygame.sprite.Group()
+exit_group = pygame.sprite.Group()
 
 
 def load_image(name, width=None, height=None, colorkey=None):
@@ -50,7 +50,7 @@ def load_image(name, width=None, height=None, colorkey=None):
     return image
 
 
-def load_level(number_dungeon, number_location):
+def load_level():
     filename = "data/dungeons/dungeon_" + str(number_dungeon) + '/location_' + str(number_location) + '.txt'
     # читаем уровень, убирая символы перевода строки
     with open(filename, 'r') as mapFile:
@@ -67,6 +67,8 @@ def generate_level(level):
             # Floors
             if level[y][x] == '.':
                 Tile('floor_' + str(random.choice([1, 1, 1, 2, 3, 4, 9])), x, y)
+            elif level[y][x] == '%':
+                Exit(x, y)
             # Walls
 
             # Doors
@@ -120,6 +122,12 @@ def generate_level(level):
             elif level[y][x] == '&':
                 Tile('floor_1', x, y)
                 new_enemies.append(Enemie_Slime(x, y))
+            elif level[y][x] == '$':
+                Tile('floor_1', x, y)
+                new_enemies.append(Enemie_Big_Ogre(x, y))
+            elif level[y][x] == 'o':
+                Tile('floor_1', x, y)
+                new_enemies.append(Enemie_Masked_Orc(x, y))
 
     # вернем игрока, а также размер поля в клетках
     return new_player, new_enemies, x, y
@@ -136,13 +144,13 @@ def start_screen():
                   "Если в правилах несколько строк,",
                   "приходится выводить их построчно"]
 
-    fon = pygame.transform.scale(load_image('full tilemap.png'), (WIDTH, HEIGHT))
+    fon = pygame.transform.scale(load_image('ui (new)/start_screen.png'), (WIDTH, HEIGHT))
     screen.blit(fon, (0, 0))
     font = pygame.font.Font(None, 30)
     text_coord = 50
     pygame.display.set_caption('Dark Lifes')
     for line in intro_text:
-        string_rendered = font.render(line, 1, pygame.Color('black'))
+        string_rendered = font.render(line, True, pygame.Color('black'))
         intro_rect = string_rendered.get_rect()
         text_coord += 10
         intro_rect.top = text_coord
@@ -196,13 +204,15 @@ tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
                'floor_8': load_image('tiles/floor/floor_8.png', 60, 60),
                'floor_9': load_image('tiles/floor/floor_9.png', 60, 60),
 
+               'exit_dungeon': pygame.transform.flip(load_image('tiles/floor/stair_nextlevel.png', 60, 60), True,
+                                                     False),
+
                'door': load_image('tiles/wall/door_anim_opening_f0.png', 60, 60)}
 
-player_image_right = load_image('heroes/knight/knight_idle_anim_f0.png', 60, 60)
-player_image_left = pygame.transform.flip(player_image_right, True, False)
+player_image_anim_right = load_image('heroes/knight/knight_run_spritesheet.png', 360, 60)
+player_image_anim_left = pygame.transform.flip(player_image_anim_right, True, False)
 
-spikes_up = load_image('tiles/floor/spikes_anim_f9.png', 60, 60)
-spikes_down = load_image('tiles/floor/spikes_anim_f0.png', 60, 60)
+spikes_anim = load_image('tiles/floor/spikes_spritesheet.png', 600, 60)
 
 health_player = {"health_1": load_image('ui (new)/health_ui.png', 250, 50),
                  "health_2": load_image('ui (new)/health_ui_2.png', 250, 50),
@@ -210,11 +220,14 @@ health_player = {"health_1": load_image('ui (new)/health_ui.png', 250, 50),
                  "health_4": load_image('ui (new)/health_ui_4.png', 250, 50),
                  "health_5": load_image('ui (new)/health_ui_5.png', 250, 50)}
 
-enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png', 60, 60),
-           'enemie_slime': load_image('enemies/slime/slime_idle_anim_f0.png', 60, 60)}
+enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_run_spritesheet.png', 360, 60),
+           'enemie_slime': load_image('enemies/slime/slime_run_spritesheeet.png', 360, 60),
+           'enemie_big_ogre': load_image('enemies/big_ogre/ogre_run_animation.png', 360, 90, -1),
+           'enemie_masked_orc': load_image('enemies/masked_orc/masked_orc_run_animation.png', 200, 50, -1),
+           }
 
-drop_objects = [load_image('props_itens\key_silver.png', 50, 50), load_image('props_itens\potion_green.png', 50, 50),
-                load_image('props_itens\potion_red.png', 50, 50), load_image('props_itens\potion_yellow.png', 50, 50)]
+drop_objects = [load_image('props_itens/key_silver.png', 50, 50), load_image('props_itens/potion_green.png', 50, 50),
+                load_image('props_itens/potion_red.png', 50, 50), load_image('props_itens/potion_yellow.png', 50, 50)]
 
 tile_width = tile_height = 60
 
@@ -241,16 +254,28 @@ class Wall(Tile):
     def proverka(self, tile_type, rect):
         if tile_type in ["wall_1", "wall_2", "wall_3", "wall_crack"]:
             list_top.append(rect)
-            if len(list_top) == 11:
-                list_right.append(rect)
-        if tile_type == "wall_left":
+            if number_location == 1:
+                if len(list_top) == 11:
+                    list_right.append(rect)
+            else:
+                if len(list_top) > 10:
+                    if len(list_top) == 12:
+                        list_left.append(rect)
+                    elif len(list_top) == 13:
+                        list_right.append(rect)
+        elif tile_type == "wall_left" or tile_type == "wall_top_inner_left_2":
             list_left.append(rect)
         if tile_type == "wall_bottom" or tile_type == "wall_bottom_left":
             list_bottom.append(rect)
-        if tile_type == "wall_right":
+        elif tile_type == "wall_right" or tile_type == "wall_top_inner_right_2":
             list_right.append(rect)
-        if tile_type == "wall_top_inner_right_2":
-            list_right.append(rect)
+
+
+class Exit(pygame.sprite.Sprite):
+    def __init__(self, pos_x, pos_y):
+        super().__init__(exit_group, all_sprites)
+        self.image = tile_images['exit_dungeon']
+        self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x, TOP_IND + tile_height * pos_y)
 
 
 class Health_Player(pygame.sprite.Sprite):
@@ -258,15 +283,6 @@ class Health_Player(pygame.sprite.Sprite):
         super().__init__(tiles_group, healths_group)
         self.image = health_player[health_number]
         self.rect = self.image.get_rect().move(10, 10)
-
-
-class Spikes(pygame.sprite.Sprite):
-    def __init__(self, pos_x, pos_y):
-        super().__init__(spikes_group, all_sprites)
-        self.image = spikes_up
-        self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x, TOP_IND + tile_height * pos_y)
-        list_right.append(self.rect)
-        list_left.append(self.rect)
 
 
 class Weapon:
@@ -301,14 +317,58 @@ class Weapon:
         return self.name
 
 
-class Player(pygame.sprite.Sprite):
+class AnimatedSprite(pygame.sprite.Sprite):
+    def __init__(self, sheet, columns, rows, x, y, group_sprites, delta=1):
+        super().__init__(group_sprites, all_sprites)
+        self.frames = []
+        self.cnt = 0
+        self.cut_sheet(sheet, columns, rows)
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]
+        self.rect = self.rect.move(x, y)
+        self.delta = delta
+        self.time = 0
+
+    def cut_sheet(self, sheet, columns, rows):
+        if self.cnt == 0:
+            self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                    sheet.get_height() // rows)
+            self.cnt += 1
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
+    def update(self):
+        self.time += 1
+        if self.time == self.delta:
+            self.time = 0
+            self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+            self.image = self.frames[self.cur_frame]
+
+
+class Spikes(AnimatedSprite):
     def __init__(self, pos_x, pos_y):
-        super().__init__(player_group, all_sprites)
-        self.image = player_image_right
-        self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x + 16, TOP_IND + tile_height * pos_y + 5)
+        super().__init__(spikes_anim, 10, 1, LEFT_IND + tile_width * pos_x, TOP_IND + tile_height * pos_y, spikes_group)
+        self.UP_or_DOWN = False
+        self.delta = 1
+        for i in range(7):
+            self.update()
+        if self.rect.x >= 400:
+            list_right.append(self.rect)
+        else:
+            list_left.append(self.rect)
+
+
+class Player(AnimatedSprite):
+    def __init__(self, pos_x, pos_y):
+        super().__init__(player_image_anim_right, 6, 1, LEFT_IND + tile_width * pos_x + 16,
+                         TOP_IND + tile_height * pos_y + 5, player_group)
         self.hp = 100
         self.player_weapons = []
         self.eqip_weapon = 0
+        self.delta = 2
 
     def hit(self, target):
         self.player_weapons[self.eqip_weapon].hit(self, target)
@@ -339,11 +399,10 @@ class Player(pygame.sprite.Sprite):
             self.hp -= amount
 
 
-class BaseEnemy(pygame.sprite.Sprite):
-    def __init__(self, name_enemie, pos_x, pos_y):
-        super().__init__(enemies_group, all_sprites)
-        self.image = enemies[name_enemie]
-        self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x + 15, TOP_IND + tile_height * pos_y + 5)
+class BaseEnemy(AnimatedSprite):
+    def __init__(self, name_enemie, pos_x, pos_y, column=6, row=1):
+        super().__init__(enemies[name_enemie], column, row, LEFT_IND + tile_width * pos_x + 15,
+                         TOP_IND + tile_height * pos_y + 5, enemies_group)
         self.enemie_weapons = []
         self.eqip_weapon = 0
         self.hp = 30
@@ -368,15 +427,29 @@ class BaseEnemy(pygame.sprite.Sprite):
 
 class Enemie_Goblin(BaseEnemy):
     def __init__(self, pos_x, pos_y):
-        super().__init__('enemie_goblin', pos_x, pos_y)
+        super().__init__('enemie_goblin', pos_x, pos_y, column=6, row=1)
         self.enemie_weapons.append(sword_for_goblin)
         self.hp = 50
 
 
 class Enemie_Slime(BaseEnemy):
     def __init__(self, pos_x, pos_y):
-        super().__init__('enemie_slime', pos_x, pos_y)
+        super().__init__('enemie_slime', pos_x, pos_y, column=6, row=1)
         self.enemie_weapons.append(slize_for_slime)
+
+
+class Enemie_Masked_Orc(BaseEnemy):
+    def __init__(self, pos_x, pos_y):
+        super().__init__('enemie_masked_orc', pos_x, pos_y, column=4, row=1)
+        self.enemie_weapons.append(sword_for_masked_ork)
+        self.hp = 40
+
+
+class Enemie_Big_Ogre(BaseEnemy):
+    def __init__(self, pos_x, pos_y):
+        super().__init__('enemie_big_ogre', pos_x, pos_y, column=4, row=1)
+        self.enemie_weapons.append(sword_for_big_ogre)
+        self.hp = 80
 
 
 class Camera:
@@ -401,36 +474,46 @@ start_screen()
 
 pygame.display.set_caption('Dark Lifes')
 # Оружия
-sword_for_player = Weapon('Меч', 10, 100)
-sword_for_goblin = Weapon('Меч', 8, 100)
-slize_for_slime = Weapon('Меч', 4, 100)
+sword_for_player = Weapon('Меч игрока', 10, 100)
+sword_for_goblin = Weapon('Меч гоблина', 8, 100)
+slize_for_slime = Weapon('Слизь', 4, 100)
+sword_for_masked_ork = Weapon('Меч маленького орка', 4, 100)
+sword_for_big_ogre = Weapon('Меч большого огра', 12, 100)
 healths = Health_Player("health_5")
 # Таймеры
 ENEMIEGOEVENT = pygame.USEREVENT + 1
-pygame.time.set_timer(ENEMIEGOEVENT, 100)
-MYEVENTTYPE = pygame.USEREVENT + 1
-pygame.time.set_timer(MYEVENTTYPE, 1000)
+pygame.time.set_timer(ENEMIEGOEVENT, 300)
+MYEVENTTYPE = pygame.USEREVENT + 2
+pygame.time.set_timer(MYEVENTTYPE, 1200)
 
-level = load_level(number_dungeon, number_location)
+level = load_level()
 player, all_enemies, level_x, level_y = generate_level(level)
 player.add_weapon(sword_for_player)
 camera = Camera((level_x, level_y))
 
 running = True
+
+animations_spikes_cnt = 0
+L_or_R_or_S = 'stay'
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT or event.key == pygame.K_a:
-                player.image = player_image_left
                 for lt in list_left:
                     if player.rect.collidepoint(lt.bottomright):
                         break
                 else:
+                    if L_or_R_or_S == 'right' or L_or_R_or_S == 'stay':
+                        L_or_R_or_S = 'left'
+                        player.frames = []
+                        player.cur_frame = 0
+                        player.cut_sheet(player_image_anim_left, 6, 1)
+                    player_group.update()
                     player.rect.x -= STEP
-            if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-                player.image = player_image_right
+
+            elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                 for r in list_right:
                     if list_right[0] == r:
                         if player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
@@ -440,26 +523,35 @@ while running:
                                 player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
                             break
                 else:
+                    if L_or_R_or_S == 'left' or L_or_R_or_S == 'stay':
+                        L_or_R_or_S = 'right'
+                        player.frames = []
+                        player.cur_frame = 0
+                        player.cut_sheet(player_image_anim_right, 6, 1)
+                    player_group.update()
                     player.rect.x += STEP
-            if event.key == pygame.K_UP or event.key == pygame.K_w:
+
+            elif event.key == pygame.K_UP or event.key == pygame.K_w:
                 for h in list_top:
                     if player.rect.collidepoint(h.center[0], h.center[1] + 10):
                         break
                 else:
+                    player_group.update()
                     player.rect.y -= STEP
-            if event.key == pygame.K_DOWN or event.key == pygame.K_s:
+
+            elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
                 for b in list_bottom:
                     if player.rect.collidepoint(b.top + 30, b.left):
                         break
                 else:
+                    player_group.update()
                     player.rect.y += STEP
-
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 for enemie in enemies_group:
                     player.hit(enemie)
-        for enemie in enemies_group:
-            if event.type == ENEMIEGOEVENT:
+        if event.type == ENEMIEGOEVENT:
+            for enemie in all_enemies:
                 player_x, player_y = player.rect.x, player.rect.y
                 enemie_x, enemie_y = enemie.rect.x, enemie.rect.y
                 ans = pygame.sprite.spritecollide(enemie, enemies_group, False)
@@ -475,33 +567,38 @@ while running:
                 else:
                     enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
                     enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
-            if event.type == MYEVENTTYPE:
-                for enemie in all_enemies:
-                    enemie.hit(player)
-                    if not player.is_alive():
-                        player.hp = 100
-                        player = Player(5, 5)
-                        player.hp = 100
+                enemie.update()
+
+        if event.type == MYEVENTTYPE:
+            for enemie in all_enemies:
+                enemie.hit(player)
+                if not player.is_alive():
+                    player.hp = 100
+                    player = Player(5, 5)
+                    player.hp = 100
+                    healths.kill()
+                    healths = Health_Player("health_5")
+                    player.add_weapon(sword_for_player)
+                else:
+                    if 50 < player.hp <= 75:
                         healths.kill()
-                        healths = Health_Player("health_5")
-                        player.add_weapon(sword_for_player)
-                    else:
-                        if 50 < player.hp <= 75:
-                            healths.kill()
-                            healths = Health_Player("health_4")
-                        elif 25 < player.hp <= 50:
-                            healths.kill()
-                            healths = Health_Player("health_3")
-                        elif 0 < player.hp <= 25:
-                            healths.kill()
-                            healths = Health_Player("health_2")
+                        healths = Health_Player("health_4")
+                    elif 25 < player.hp <= 50:
+                        healths.kill()
+                        healths = Health_Player("health_3")
+                    elif 0 < player.hp <= 25:
+                        healths.kill()
+                        healths = Health_Player("health_2")
+
         if len(enemies_group) == 0:
             for spike in spikes_group:
                 if spike.rect.x >= 400:
-                    spike.image = spikes_down
+                    if not spike.UP_or_DOWN:
+                        spike.UP_or_DOWN = True
+                        for i in range(4):
+                            spike.update()
                     try:
                         list_right.remove(spike)
-                        list_left.remove(spike)
                     except:
                         pass
             ans = pygame.sprite.spritecollide(player, spikes_group, False)
@@ -513,12 +610,18 @@ while running:
                 for sprt in all_sprites:
                     if sprt not in player_group:
                         sprt.kill()
-                level = load_level(number_dungeon, number_location)
+                list_top = []
+                list_left = []
+                list_bottom = []
+                list_right = []
+                level = load_level()
                 player, all_enemies, level_x, level_y = generate_level(level)
                 player.kill()
                 player = now_player
-                player.rect.x = 230
+                player.rect.x = 275
+                player.rect.y = 351
                 camera = Camera((level_x, level_y))
+                animations_spikes_cnt = 0
 
     camera.update(player)
 
@@ -527,6 +630,7 @@ while running:
 
     screen.fill(pygame.Color(181, 83, 83))
     spikes_group.draw(screen)
+    exit_group.draw(screen)
     tiles_group.draw(screen)
     enemies_group.draw(screen)
     player_group.draw(screen)
