@@ -1,10 +1,12 @@
-import os
-import sys
 import datetime
+import os
+import random
+import sys
 
 import pygame
-import random
 
+# Карты - Арсен
+# Внешний вид - Арсен
 FPS = 100
 WIDTH = 700
 HEIGHT = 650
@@ -14,6 +16,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 
 
+# Арсен
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tiles_group, all_sprites)
@@ -29,7 +32,7 @@ class Wall(Tile):
     def proverka(self, tile_type, rect):
         if tile_type in ["wall_1", "wall_2", "wall_3", "wall_crack"]:
             list_top.append(rect)
-            if number_location == 1 and number_dungeon == 1:
+            if number_location == 1:
                 if len(list_top) == 11:
                     list_right.append(rect)
             else:
@@ -60,6 +63,7 @@ class Chest(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(LEFT_IND + tile_width * pos_x, TOP_IND + tile_height * pos_y)
 
 
+# Тимур
 class Health_Player(pygame.sprite.Sprite):
     def __init__(self, health_number):
         super().__init__(tiles_group, healths_group)
@@ -109,6 +113,8 @@ class Weapon:
         return self.name
 
 
+#
+# Арсен
 class AnimatedSprite(pygame.sprite.Sprite):
     def __init__(self, sheet, columns, rows, x, y, group_sprites, delta=1):
         super().__init__(group_sprites, all_sprites)
@@ -191,6 +197,8 @@ class Player(AnimatedSprite):
             self.hp -= amount
 
 
+#
+# Тимур
 class BaseEnemy(AnimatedSprite):
     def __init__(self, name_enemie, pos_x, pos_y, column=6, row=1):
         super().__init__(enemies[name_enemie], column, row, LEFT_IND + tile_width * pos_x + 15,
@@ -217,6 +225,8 @@ class BaseEnemy(AnimatedSprite):
         self.enemie_weapons[self.eqip_weapon].hit(self, target)
 
 
+#
+# Арсен
 # Первое подземелье
 class Enemie_Goblin(BaseEnemy):
     def __init__(self, pos_x, pos_y):
@@ -336,6 +346,8 @@ def main_play():
     pygame.time.set_timer(MYEVENTTYPE, 1200)
     SUPERSWORD = pygame.USEREVENT + 3
     pygame.time.set_timer(SUPERSWORD, 10000)
+    #
+    # Тимур
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -356,6 +368,8 @@ def main_play():
                     for lt in list_left:
                         if player.rect.collidepoint(lt.bottomright):
                             break
+                    #
+                    # Арсен
                     else:
                         if L_or_R_or_S == 'right' or L_or_R_or_S == 'stay':
                             L_or_R_or_S = 'left'
@@ -364,7 +378,8 @@ def main_play():
                             player.cut_sheet(player_image_anim_left, 6, 1)
                         player_group.update()
                         player.rect.x -= STEP
-
+                #
+                # Тимур
                 elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                     for r in list_right:
                         if list_right[0] == r:
@@ -374,6 +389,8 @@ def main_play():
                             if player.rect.collidepoint(r.bottomleft) or \
                                     player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
                                 break
+                    #
+                    # Арсен
                     else:
                         if L_or_R_or_S == 'left' or L_or_R_or_S == 'stay':
                             L_or_R_or_S = 'right'
@@ -382,6 +399,8 @@ def main_play():
                             player.cut_sheet(player_image_anim_right, 6, 1)
                         player_group.update()
                         player.rect.x += STEP
+                #
+                # Тимур
 
                 elif event.key == pygame.K_UP or event.key == pygame.K_w:
                     for h in list_top:
@@ -398,7 +417,7 @@ def main_play():
                     else:
                         player_group.update()
                         player.rect.y += STEP
-
+            # Арсен
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     for enemie in new_enemies:
@@ -411,7 +430,8 @@ def main_play():
             if player.eqip_weapon == 1 and event.type == SUPERSWORD:
                 player.eqip_weapon = 0
                 print("Действия зелёного зелья закончилось")
-
+            #
+            # Тимур
             for drops in drop_list:
                 if drops.rect.colliderect(player.rect):
                     if drop_objects.index(drops.image) == 0:
@@ -441,7 +461,8 @@ def main_play():
                             print("Вы подобрали зелье, дающее супер меч на некоторое время")
                     drops.kill()
                     drop_list.remove(drops)
-
+            #
+            # Арсен
             for enemie in enemies_group:
                 if event.type == ENEMIEGOEVENT:
                     player_x, player_y = player.rect.x, player.rect.y
@@ -464,12 +485,14 @@ def main_play():
                         enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
                         enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
                         enemie.update()
-
+            #
+            # Тимур
             if event.type == MYEVENTTYPE:
                 for enemie in new_enemies:
                     enemie.hit(player)
                     check_healths()
-
+            #
+            # Арсен
             if len(pygame.sprite.spritecollide(player, chest_group, False)) >= 1:
                 final_screen()
 
@@ -575,6 +598,7 @@ def load_level():
     return level_map
 
 
+# Арсен
 def generate_level(level):
     new_player, x, y = None, None, None
     for y in range(len(level)):
@@ -684,6 +708,9 @@ def terminate():
     sys.exit()
 
 
+#
+# Тимур
+# Экраны старт, помощь, финал
 def start_screen():
     fon = pygame.transform.scale(load_image('ui (new)/start_screen.png'), (WIDTH, HEIGHT))
     screen.blit(fon, (0, 0))
@@ -742,6 +769,8 @@ def help_screen():
         clock.tick(FPS)
 
 
+#
+# Тимур
 def final_screen():
     global final_flag, number_dungeon, number_location, healths, camera, player, new_enemies
     if len(player_group) > 0:
@@ -845,6 +874,8 @@ def final_screen():
         clock.tick(FPS)
 
 
+#
+# Тимур
 def check_healths():
     global healths, player
     if player.hp <= 75:
@@ -858,6 +889,9 @@ def check_healths():
             healths = Health_Player("health_2")
 
 
+#
+
+# Арсен
 # Подгрузка всех изображений
 tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
                'wall_left': load_image('tiles/wall/wall_top_left.png', 60, 60),
@@ -923,7 +957,8 @@ enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_run_spritesheet.pn
 
 drop_objects = [load_image('props_itens/potion_green.png', 50, 50),
                 load_image('props_itens/potion_red.png', 50, 50), load_image('props_itens/potion_yellow.png', 50, 50)]
-
+#
+# Арсен
 STEP = 30
 STEPEN = 10
 LEFT_IND = 50
@@ -935,6 +970,7 @@ final_flag = False
 murders_numbers = []
 
 player = None
+# Создание спрайтов
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
 spikes_group = pygame.sprite.Group()
@@ -979,8 +1015,10 @@ sword_for_swampy = Weapon('Меч свампа', 4, 100)
 
 flag_moves_enemys = True
 animations_spikes_cnt = 0
-L_or_R_or_S = 'stay'
-
+L_or_R_or_S = 'right'
+#
+# Тимур
+# Сохранение
 f = open("data/save_data.txt", "r", encoding='utf-8')
 text = f.readlines()
 if len(text) > 0:
@@ -1007,3 +1045,4 @@ else:
     healths = Health_Player("health_5")
     player.hp = 100
 main_play()
+#
