@@ -1,5 +1,6 @@
 import os
 import sys
+import datetime
 
 import pygame
 import random
@@ -16,7 +17,8 @@ LEFT_IND = 50
 TOP_IND = 50
 number_dungeon = 1
 number_location = 1
-
+final_flag = False
+murders_numbers = []
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 
@@ -28,6 +30,203 @@ player_group = pygame.sprite.Group()
 enemies_group = pygame.sprite.Group()
 healths_group = pygame.sprite.Group()
 dropable_group = pygame.sprite.Group()
+drop_list = []
+now_date = datetime.datetime.today()
+game_timer = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute,
+                                seconds=now_date.second)
+deltas = 0
+new_enemies = []
+
+
+def main_play():
+    global final_flag, number_dungeon, number_location, healths, drop_list, deltas, new_enemies, murders_numbers, camera, player
+    time_flag = True
+    drop_list = []
+    running = True
+    pygame.display.set_caption('Dark Lifes')
+    # Оружия
+    # Таймеры
+    ENEMIEGOEVENT = pygame.USEREVENT + 1
+    pygame.time.set_timer(ENEMIEGOEVENT, 300)
+    MYEVENTTYPE = pygame.USEREVENT + 2
+    pygame.time.set_timer(MYEVENTTYPE, 1200)
+    SUPERSWORD = pygame.USEREVENT + 3
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                if not final_flag:
+                    f = open("save_data.txt", "r+", encoding='utf-8')
+                    f.truncate()
+                    f.close()
+                    f = open("save_data.txt", "w+", encoding='utf-8')
+                    dates = datetime.datetime.today()
+                    date = datetime.timedelta(hours=dates.hour, minutes=dates.minute, seconds=int(dates.second))
+                    f.write(
+                        f"{str(number_dungeon)}\n{str(number_location)}\n{str(date - game_timer)}\n{str(len(murders_numbers))}\n{str(player.hp)}")
+                    f.close()
+                final_flag = False
+                running = False
+            elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                for lt in list_left:
+                    if player.rect.collidepoint(lt.bottomright):
+                        break
+                else:
+                    if L_or_R_or_S == 'right' or L_or_R_or_S == 'stay':
+                        L_or_R_or_S = 'left'
+                        player.frames = []
+                        player.cur_frame = 0
+                        player.cut_sheet(player_image_anim_left, 6, 1)
+                    player_group.update()
+                    player.rect.x -= STEP
+
+            elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                for r in list_right:
+                    if list_right[0] == r:
+                        if player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
+                            break
+                    else:
+                        if player.rect.collidepoint(r.bottomleft) or \
+                                player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
+                            break
+                else:
+                    if L_or_R_or_S == 'left' or L_or_R_or_S == 'stay':
+                        L_or_R_or_S = 'right'
+                        player.frames = []
+                        player.cur_frame = 0
+                        player.cut_sheet(player_image_anim_right, 6, 1)
+                    player_group.update()
+                    player.rect.x += STEP
+
+            elif event.key == pygame.K_UP or event.key == pygame.K_w:
+                for h in list_top:
+                    if player.rect.collidepoint(h.center[0], h.center[1] + 10):
+                        break
+                else:
+                    player_group.update()
+                    player.rect.y -= STEP
+
+            elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
+                for b in list_bottom:
+                    if player.rect.collidepoint(b.top + 30, b.left):
+                        break
+                else:
+                    player_group.update()
+                    player.rect.y += STEP
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    for enemie in new_enemies:
+                        player.hit(enemie)
+
+            if time_flag and player.eqip_weapon == 1:
+                time_flag = False
+                pygame.time.set_timer(SUPERSWORD, 10000)
+
+            if player.eqip_weapon == 1 and event.type == SUPERSWORD:
+                player.eqip_weapon = 0
+                print("Действия зелёного зелья закончилось")
+
+            for drops in drop_list:
+                if drops.rect.colliderect(player.rect):
+                    if drop_objects.index(drops.image) == 0:
+                        delta = random.choice([-25, 25])
+                        player.hp += delta
+                        if player.hp > 100:
+                            player.hp = 100
+                        if delta < 0:
+                            print("Вам подобрали отравленное зелье, на -25 жизней")
+                        else:
+                            print("Вам подобрали полезное зелье, на +25 жизней")
+                        check_healths()
+                        print("Вы подобрали зелье случайного изменения жизней")
+                    elif drop_objects.index(drops.image) == 1:
+                        player.hp = 100
+                        healths.kill()
+                        healths = Health_Player("health_5")
+                        print("Вы подобрали зелье восстановления здоровья")
+                    elif drop_objects.index(drops.image) == 2:
+                        if player.eqip_weapon != 1:
+                            sword_for_player_2 = Weapon('Меч', 20, 120)
+                            player.add_weapon(sword_for_player_2)
+                            player.eqip_weapon = 1
+                            print("Вы подобрали зелье, дающее супер меч на некоторое время")
+                    drops.kill()
+                    drop_list.remove(drops)
+
+            for enemie in enemies_group:
+                if event.type == ENEMIEGOEVENT:
+                    player_x, player_y = player.rect.x, player.rect.y
+                    enemie_x, enemie_y = enemie.rect.x, enemie.rect.y
+                    ans = pygame.sprite.spritecollide(enemie, enemies_group, False)
+                    if len(ans) == 1:
+                        if player_x + STEPEN * 2 - 10 >= enemie_x:
+                            enemie.rect.x += STEPEN
+                        if player_y + STEPEN * 2 - 10 >= enemie_y:
+                            enemie.rect.y += STEPEN
+                        if player_x + STEPEN * 2 - 10 <= enemie_x:
+                            enemie.rect.x -= STEPEN
+                        if player_y + STEPEN * 2 - 10 <= enemie_y:
+                            enemie.rect.y -= STEPEN
+                    else:
+                        enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
+                        enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
+
+            if event.type == MYEVENTTYPE:
+                for enemie in new_enemies:
+                    enemie.hit(player)
+                    check_healths()
+
+            if len(enemies_group) == 0:
+              for spike in spikes_group:
+                  if spike.rect.x >= 400:
+                      if not spike.UP_or_DOWN:
+                          spike.UP_or_DOWN = True
+                          for i in range(4):
+                              spike.update()
+                      try:
+                          list_right.remove(spike)
+                      except:
+                          pass
+              ans = pygame.sprite.spritecollide(player, spikes_group, False)
+              if len(ans) >= 4:
+                  number_location += 1
+                  if number_location > 10:
+                      number_dungeon += 1
+                  now_player = player
+                  for sprt in all_sprites:
+                      if sprt not in player_group:
+                          sprt.kill()
+                  list_top = []
+                  list_left = []
+                  list_bottom = []
+                  list_right = []
+                  level = load_level()
+                  player, all_enemies, level_x, level_y = generate_level(level)
+                  player.kill()
+                  player = now_player
+                  player.rect.x = 275
+                  player.rect.y = 351
+                  camera = Camera((level_x, level_y))
+                  animations_spikes_cnt = 0
+
+        camera.update(player)
+
+        for sprite in all_sprites:
+            camera.apply(sprite)
+
+        screen.fill(pygame.Color(124, 72, 36))
+        spikes_group.draw(screen)
+        tiles_group.draw(screen)
+        enemies_group.draw(screen)
+        dropable_group.draw(screen)
+        player_group.draw(screen)
+        healths_group.draw(screen)
+        pygame.display.flip()
+
+        clock.tick(FPS)
+
+    terminate()
 exit_group = pygame.sprite.Group()
 
 
@@ -61,7 +260,7 @@ def load_level():
 
 
 def generate_level(level):
-    new_player, new_enemies, x, y = None, [], None, None
+    new_player, x, y = None, None, None
     for y in range(len(level)):
         for x in range(len(level[y])):
             # Floors
@@ -129,6 +328,7 @@ def generate_level(level):
                 Tile('floor_1', x, y)
                 new_enemies.append(Enemie_Masked_Orc(x, y))
 
+
     # вернем игрока, а также размер поля в клетках
     return new_player, new_enemies, x, y
 
@@ -139,97 +339,166 @@ def terminate():
 
 
 def start_screen():
-    intro_text = ["ЗАСТАВКА", "",
-                  "Правила игры",
-                  "Если в правилах несколько строк,",
-                  "приходится выводить их построчно"]
-
     fon = pygame.transform.scale(load_image('ui (new)/start_screen.png'), (WIDTH, HEIGHT))
     screen.blit(fon, (0, 0))
-    font = pygame.font.Font(None, 30)
-    text_coord = 50
     pygame.display.set_caption('Dark Lifes')
-    for line in intro_text:
-        string_rendered = font.render(line, True, pygame.Color('black'))
-        intro_rect = string_rendered.get_rect()
-        text_coord += 10
-        intro_rect.top = text_coord
-        intro_rect.x = 10
-        text_coord += intro_rect.height
-        screen.blit(string_rendered, intro_rect)
+    font = pygame.font.Font(None, 70)
+    text = font.render("  PLAY", True, (255, 62, 61))
+    text_x = 480
+    text_y = 120
+    text_w = text.get_width()
+    text_h = text.get_height()
+    pygame.draw.rect(screen, (0, 28, 40), (text_x - 10, text_y - 10,
+                                           text_w + 50, text_h + 20), 0)
+    screen.blit(text, (text_x, text_y))
+    text_x_2 = 480
+    text_y_2 = 210
+    font = pygame.font.Font(None, 70)
+    text = font.render("  HELP", True, (255, 62, 61))
+    pygame.draw.rect(screen, (0, 28, 40), (text_x_2 - 10, text_y_2 - 10,
+                                           text_w + 50, text_h + 20), 0)
+    screen.blit(text, (text_x_2, text_y_2))
 
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
-            elif event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
-                return  # начинаем игру
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    if text_x - 10 <= event.pos[0] <= (text_x - 10) + (text_w + 50) and \
+                            text_y - 10 <= event.pos[1] <= (text_y - 10) + (text_h + 20):
+                        if final_flag:
+                            file = open("save_data.txt", "r+", encoding='utf-8')
+                            file.truncate()
+                            file.close()
+                        return
+                    elif text_x_2 - 10 <= event.pos[0] <= (text_x_2 - 10) + (text_w + 50) and \
+                            text_y_2 - 10 <= event.pos[1] <= (text_y_2 - 10) + (text_h + 20):
+                        help_screen()
+                        return
         pygame.display.flip()
         clock.tick(FPS)
 
 
-list_top = []
-list_left = []
-list_bottom = []
-list_right = []
+def help_screen():
+    fon = pygame.transform.scale(load_image('ui (new)/help_screen.png'), (WIDTH, HEIGHT))
+    screen.blit(fon, (0, 0))
+    pygame.display.set_caption('Dark Lifes')
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    start_screen()
+                    return
+        pygame.display.flip()
+        clock.tick(FPS)
 
-tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
-               'wall_left': load_image('tiles/wall/wall_top_left.png', 60, 60),
-               'wall_right': load_image('tiles/wall/wall_top_right.png', 60, 60),
-               'wall_bottom': load_image('tiles/wall/wall_bottom.png', 60, 60),
 
-               'wall_bottom_left': load_image('tiles/wall/wall_bottom_left.png', 60, 60),
-               'wall_bottom_right': load_image('tiles/wall/wall_bottom_right.png', 60, 60),
+def final_screen():
+    global final_flag, number_dungeon, number_location, healths, camera, player, new_enemies
+    if len(player_group) > 0:
+        final_flag = True
+        fon = pygame.transform.scale(load_image('ui (new)/final_screen_win.png'), (WIDTH, HEIGHT))
+        screen.blit(fon, (0, 0))
+        pygame.display.set_caption('Dark Lifes')
+        font = pygame.font.Font(None, 50)
+        font_2 = pygame.font.Font(None, 30)
+        text = font.render(f"Количество убийств: {len(murders_numbers)}", True, (255, 62, 61))
+        text_2 = font_2.render(f"Количество пройденных подземелий, локаций: {number_dungeon}, {number_location}", True,
+                               (255, 62, 61))
+        now_date = datetime.datetime.today()
+        game_timer_2 = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute,
+                                          seconds=now_date.second)
+        if deltas != 0:
+            text_3 = font.render(f"Общее время: {game_timer_2 - game_timer + deltas}", True, (255, 62, 61))
+        else:
+            text_3 = font.render(f"Общее время: {game_timer_2 - game_timer}", True, (255, 62, 61))
+        text_x = 113
+        text_y = 236
+        text_4 = font.render(f'Нажмите "Enter"', True, (255, 62, 61))
+        screen.blit(text, (text_x, text_y))
+        screen.blit(text_2, (text_x, text_y + 60))
+        screen.blit(text_3, (text_x, text_y + 120))
+        screen.blit(text_4, (text_x, text_y + 180))
+    else:
+        final_flag = True
+        fon = pygame.transform.scale(load_image('ui (new)/final_screen_over.png'), (WIDTH, HEIGHT))
+        screen.blit(fon, (0, 0))
+        pygame.display.set_caption('Dark Lifes')
+        font = pygame.font.Font(None, 50)
+        font_2 = pygame.font.Font(None, 30)
+        text = font.render(f"Количество убийств: {len(murders_numbers)}", True, (255, 62, 61))
+        text_2 = font_2.render(f"Количество пройденных подземелий, локаций: {number_dungeon - 1}, {number_location - 1}", True,
+                               (255, 62, 61))
+        now_date = datetime.datetime.today()
+        game_timer_2 = datetime.timedelta(hours=now_date.hour, minutes=now_date.minute,
+                                          seconds=now_date.second)
+        if deltas != 0:
+            text_3 = font.render(f"Общее время: {game_timer_2 - game_timer + deltas}", True, (255, 62, 61))
+        else:
+            text_3 = font.render(f"Общее время: {game_timer_2 - game_timer}", True, (255, 62, 61))
+        text_x = 113
+        text_y = 236
+        font_3 = pygame.font.Font(None, 30)
+        text_4 = font_3.render(f'Нажмите "Пробел", если хотите выйти в главное меню', True, (255, 62, 61))
+        text_5 = font_3.render(f'Нажмите "B", если хотите начать заново', True, (255, 62, 61))
+        screen.blit(text, (text_x, text_y))
+        screen.blit(text_2, (text_x, text_y + 60))
+        screen.blit(text_3, (text_x, text_y + 120))
+        screen.blit(text_4, (text_x, text_y + 180))
+        screen.blit(text_5, (text_x, text_y + 240))
 
-               'wall_side_left_top': load_image('tiles/wall/wall_top_inner_left.png', 60, 60),
-               'wall_side_right_top': load_image('tiles/wall/wall_top_inner_right.png', 60, 60),
-               'wall_side_left_bottom': load_image('tiles/wall/wall_bottom_inner_left.png', 60, 60),
-               'wall_side_right_bottom': load_image('tiles/wall/wall_bottom_inner_right.png', 60, 60),
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    start_screen()
+                    number_dungeon = 1
+                    number_location = 1
+                    for sprt in all_sprites:
+                        sprt.kill()
+                    for sprt in healths_group:
+                        sprt.kill()
+                    for enemie in new_enemies:
+                        enemie.kill()
+                    new_enemies.clear()
+                    print(new_enemies)
+                    print(len(enemies_group))
+                    level = load_level()
+                    player, new_enemies, level_x, level_y = generate_level(level)
+                    camera = Camera((level_x, level_y))
+                    main_play()
+                    return
+                elif event.key == pygame.K_b:
+                    number_dungeon = 1
+                    number_location = 1
 
-               'wall_top_inner_right_2': load_image('tiles/wall/wall_top_inner_right_2.png', 60, 60),
-               'wall_top_inner_left_2': load_image('tiles/wall/wall_top_inner_left_2.png', 60, 60),
+        pygame.display.flip()
+        clock.tick(FPS)
 
-               'wall_1': load_image('tiles/wall/wall_1.png', 60, 60),
-               'wall_2': load_image('tiles/wall/wall_2.png', 60, 60),
-               'wall_3': load_image('tiles/wall/wall_3.png', 60, 60),
-               'wall_crack': load_image('tiles/wall/wall_crack.png', 60, 60),
 
-               'floor_1': load_image('tiles/floor/floor_1.png', 60, 60),
-               'floor_2': load_image('tiles/floor/floor_2.png', 60, 60),
-               'floor_3': load_image('tiles/floor/floor_3.png', 60, 60),
-               'floor_4': load_image('tiles/floor/floor_4.png', 60, 60),
-               'floor_5': load_image('tiles/floor/floor_5.png', 60, 60),
-               'floor_6': load_image('tiles/floor/floor_6.png', 60, 60),
-               'floor_7': load_image('tiles/floor/floor_7.png', 60, 60),
-               'floor_8': load_image('tiles/floor/floor_8.png', 60, 60),
-               'floor_9': load_image('tiles/floor/floor_9.png', 60, 60),
+def check_healths():
+    global healths, player
+    if player.hp <= 75:
+        for i in healths_group:
+            i.kill()
+        if 50 < player.hp <= 75:
+            healths = Health_Player("health_4")
+        elif 25 < player.hp <= 50:
+            healths = Health_Player("health_3")
+        elif 0 < player.hp <= 25:
+            healths = Health_Player("health_2")
 
-               'exit_dungeon': pygame.transform.flip(load_image('tiles/floor/stair_nextlevel.png', 60, 60), True,
-                                                     False),
 
-               'door': load_image('tiles/wall/door_anim_opening_f0.png', 60, 60)}
-
-player_image_anim_right = load_image('heroes/knight/knight_run_spritesheet.png', 360, 60)
-player_image_anim_left = pygame.transform.flip(player_image_anim_right, True, False)
-
-spikes_anim = load_image('tiles/floor/spikes_spritesheet.png', 600, 60)
-
-health_player = {"health_1": load_image('ui (new)/health_ui.png', 250, 50),
-                 "health_2": load_image('ui (new)/health_ui_2.png', 250, 50),
-                 "health_3": load_image('ui (new)/health_ui_3.png', 250, 50),
-                 "health_4": load_image('ui (new)/health_ui_4.png', 250, 50),
-                 "health_5": load_image('ui (new)/health_ui_5.png', 250, 50)}
-
-enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_run_spritesheet.png', 360, 60),
-           'enemie_slime': load_image('enemies/slime/slime_run_spritesheeet.png', 360, 60),
-           'enemie_big_ogre': load_image('enemies/big_ogre/ogre_run_animation.png', 360, 90, -1),
-           'enemie_masked_orc': load_image('enemies/masked_orc/masked_orc_run_animation.png', 200, 50, -1),
-           }
-
-drop_objects = [load_image('props_itens/key_silver.png', 50, 50), load_image('props_itens/potion_green.png', 50, 50),
-                load_image('props_itens/potion_red.png', 50, 50), load_image('props_itens/potion_yellow.png', 50, 50)]
-
-tile_width = tile_height = 60
+class DropableObjects(pygame.sprite.Sprite):
+    def __init__(self, drop_ob, pos_x, pos_y):
+        super().__init__(dropable_group, all_sprites)
+        self.image = drop_ob
+        self.rect = self.image.get_rect().move(pos_x, pos_y)
 
 
 class DropableObjects(pygame.sprite.Sprite):
@@ -254,21 +523,21 @@ class Wall(Tile):
     def proverka(self, tile_type, rect):
         if tile_type in ["wall_1", "wall_2", "wall_3", "wall_crack"]:
             list_top.append(rect)
-            if number_location == 1:
-                if len(list_top) == 11:
+        if number_location == 1:
+            if len(list_top) == 11:
+                list_right.append(rect)
+        else:
+            if len(list_top) > 10:
+                if len(list_top) == 12:
+                    list_left.append(rect)
+                elif len(list_top) == 13:
                     list_right.append(rect)
-            else:
-                if len(list_top) > 10:
-                    if len(list_top) == 12:
-                        list_left.append(rect)
-                    elif len(list_top) == 13:
-                        list_right.append(rect)
-        elif tile_type == "wall_left" or tile_type == "wall_top_inner_left_2":
-            list_left.append(rect)
-        if tile_type == "wall_bottom" or tile_type == "wall_bottom_left":
-            list_bottom.append(rect)
-        elif tile_type == "wall_right" or tile_type == "wall_top_inner_right_2":
-            list_right.append(rect)
+      elif tile_type == "wall_left" or tile_type == "wall_top_inner_left_2":
+          list_left.append(rect)
+      if tile_type == "wall_bottom" or tile_type == "wall_bottom_left":
+          list_bottom.append(rect)
+      elif tile_type == "wall_right" or tile_type == "wall_top_inner_right_2":
+          list_right.append(rect)
 
 
 class Exit(pygame.sprite.Sprite):
@@ -301,14 +570,17 @@ class Weapon:
             target.hp -= self.damage
             if not target.is_alive():
                 if isinstance(target, BaseEnemy):
-                    selection = random.choice(["-", "+", "-", "+", "-"])
+                    selection = random.choice(["+", "-", "+", "-"])
                     if selection == "+":
                         x, y = target.rect.x, target.rect.y
-                        DropableObjects(random.choice(drop_objects), x, y)
+                        drop = DropableObjects(random.choice(drop_objects), x, y)
+                        drop_list.append(drop)
                     target.kill()
-                    all_enemies.remove(target)
+                    new_enemies.remove(target)
+                    murders_numbers.append(1)
                 else:
                     target.kill()
+                    final_screen()
             print(target.hp)
         else:
             print(f'Враг слишком далеко для оружия {self.name}')
@@ -470,173 +742,97 @@ class Camera:
         self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
 
 
-start_screen()
+# Подгрузка всех изображений
+tile_images = {'wall_top': load_image('tiles/wall/wall_top_1.png', 60, 60),
+               'wall_left': load_image('tiles/wall/wall_top_left.png', 60, 60),
+               'wall_right': load_image('tiles/wall/wall_top_right.png', 60, 60),
+               'wall_bottom': load_image('tiles/wall/wall_bottom.png', 60, 60),
 
-pygame.display.set_caption('Dark Lifes')
-# Оружия
+               'wall_bottom_left': load_image('tiles/wall/wall_bottom_left.png', 60, 60),
+               'wall_bottom_right': load_image('tiles/wall/wall_bottom_right.png', 60, 60),
+
+               'wall_side_left_top': load_image('tiles/wall/wall_top_inner_left.png', 60, 60),
+               'wall_side_right_top': load_image('tiles/wall/wall_top_inner_right.png', 60, 60),
+               'wall_side_left_bottom': load_image('tiles/wall/wall_bottom_inner_left.png', 60, 60),
+               'wall_side_right_bottom': load_image('tiles/wall/wall_bottom_inner_right.png', 60, 60),
+
+               'wall_top_inner_right_2': load_image('tiles/wall/wall_top_inner_right_2.png', 60, 60),
+               'wall_top_inner_left_2': load_image('tiles/wall/wall_top_inner_left_2.png', 60, 60),
+
+               'wall_1': load_image('tiles/wall/wall_1.png', 60, 60),
+               'wall_2': load_image('tiles/wall/wall_2.png', 60, 60),
+               'wall_3': load_image('tiles/wall/wall_3.png', 60, 60),
+               'wall_crack': load_image('tiles/wall/wall_crack.png', 60, 60),
+
+               'floor_1': load_image('tiles/floor/floor_1.png', 60, 60),
+               'floor_2': load_image('tiles/floor/floor_2.png', 60, 60),
+               'floor_3': load_image('tiles/floor/floor_3.png', 60, 60),
+               'floor_4': load_image('tiles/floor/floor_4.png', 60, 60),
+               'floor_5': load_image('tiles/floor/floor_5.png', 60, 60),
+               'floor_6': load_image('tiles/floor/floor_6.png', 60, 60),
+               'floor_7': load_image('tiles/floor/floor_7.png', 60, 60),
+               'floor_8': load_image('tiles/floor/floor_8.png', 60, 60),
+               'floor_9': load_image('tiles/floor/floor_9.png', 60, 60),
+
+               'door': load_image('tiles/wall/door_anim_opening_f0.png', 60, 60)}
+
+player_image_right = load_image('heroes/knight/knight_idle_anim_f0.png', 60, 60)
+player_image_left = pygame.transform.flip(player_image_right, True, False)
+
+spikes_up = load_image('tiles/floor/spikes_anim_f9.png', 60, 60)
+spikes_down = load_image('tiles/floor/spikes_anim_f0.png', 60, 60)
+
+health_player = {"health_1": load_image('ui (new)/health_ui.png', 250, 50),
+                 "health_2": load_image('ui (new)/health_ui_2.png', 250, 50),
+                 "health_3": load_image('ui (new)/health_ui_3.png', 250, 50),
+                 "health_4": load_image('ui (new)/health_ui_4.png', 250, 50),
+                 "health_5": load_image('ui (new)/health_ui_5.png', 250, 50)}
+
+enemies = {'enemie_goblin': load_image('enemies/goblin/goblin_idle_anim_f0.png', 60, 60),
+           'enemie_slime': load_image('enemies/slime/slime_idle_anim_f0.png', 60, 60)}
+
+drop_objects = [load_image('props_itens/potion_green.png', 50, 50),
+                load_image('props_itens/potion_red.png', 50, 50), load_image('props_itens/potion_yellow.png', 50, 50)]
+
+list_top = []
+list_left = []
+list_bottom = []
+list_right = []
+
+tile_width = tile_height = 60
+start_screen()
+healths = Health_Player("health_5")
 sword_for_player = Weapon('Меч игрока', 10, 100)
 sword_for_goblin = Weapon('Меч гоблина', 8, 100)
 slize_for_slime = Weapon('Слизь', 4, 100)
 sword_for_masked_ork = Weapon('Меч маленького орка', 4, 100)
 sword_for_big_ogre = Weapon('Меч большого огра', 12, 100)
-healths = Health_Player("health_5")
-# Таймеры
-ENEMIEGOEVENT = pygame.USEREVENT + 1
-pygame.time.set_timer(ENEMIEGOEVENT, 300)
-MYEVENTTYPE = pygame.USEREVENT + 2
-pygame.time.set_timer(MYEVENTTYPE, 1200)
-
-level = load_level()
-player, all_enemies, level_x, level_y = generate_level(level)
-player.add_weapon(sword_for_player)
-camera = Camera((level_x, level_y))
-
-running = True
-
+flag_moves_enemys = True
 animations_spikes_cnt = 0
 L_or_R_or_S = 'stay'
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT or event.key == pygame.K_a:
-                for lt in list_left:
-                    if player.rect.collidepoint(lt.bottomright):
-                        break
-                else:
-                    if L_or_R_or_S == 'right' or L_or_R_or_S == 'stay':
-                        L_or_R_or_S = 'left'
-                        player.frames = []
-                        player.cur_frame = 0
-                        player.cut_sheet(player_image_anim_left, 6, 1)
-                    player_group.update()
-                    player.rect.x -= STEP
+f = open("save_data.txt", "r", encoding='utf-8')
+text = f.readlines()
+if len(text) > 0:
+    number_dungeon = int(text[0].strip())
+    number_location = int(text[1].strip())
+    level = load_level()
+    player, new_enemies, level_x, level_y = generate_level(level)
+    player.hp = int(text[4].strip())
+    check_healths()
+    player.rect.x = 275
+    player.rect.y = 351
+    camera = Camera((level_x, level_y))
 
-            elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-                for r in list_right:
-                    if list_right[0] == r:
-                        if player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
-                            break
-                    else:
-                        if player.rect.collidepoint(r.bottomleft) or \
-                                player.rect.collidepoint(0, r.left) or player.rect.collidepoint(r.topleft):
-                            break
-                else:
-                    if L_or_R_or_S == 'left' or L_or_R_or_S == 'stay':
-                        L_or_R_or_S = 'right'
-                        player.frames = []
-                        player.cur_frame = 0
-                        player.cut_sheet(player_image_anim_right, 6, 1)
-                    player_group.update()
-                    player.rect.x += STEP
-
-            elif event.key == pygame.K_UP or event.key == pygame.K_w:
-                for h in list_top:
-                    if player.rect.collidepoint(h.center[0], h.center[1] + 10):
-                        break
-                else:
-                    player_group.update()
-                    player.rect.y -= STEP
-
-            elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
-                for b in list_bottom:
-                    if player.rect.collidepoint(b.top + 30, b.left):
-                        break
-                else:
-                    player_group.update()
-                    player.rect.y += STEP
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                for enemie in enemies_group:
-                    player.hit(enemie)
-        if event.type == ENEMIEGOEVENT:
-            for enemie in all_enemies:
-                player_x, player_y = player.rect.x, player.rect.y
-                enemie_x, enemie_y = enemie.rect.x, enemie.rect.y
-                ans = pygame.sprite.spritecollide(enemie, enemies_group, False)
-                if len(ans) == 1:
-                    if player_x + STEPEN * 2 - 10 >= enemie_x:
-                        enemie.rect.x += STEPEN
-                    if player_y + STEPEN * 2 - 10 >= enemie_y:
-                        enemie.rect.y += STEPEN
-                    if player_x + STEPEN * 2 - 10 <= enemie_x:
-                        enemie.rect.x -= STEPEN
-                    if player_y + STEPEN * 2 - 10 <= enemie_y:
-                        enemie.rect.y -= STEPEN
-                else:
-                    enemie.rect.x += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
-                    enemie.rect.y += random.choice([-STEPEN, STEPEN, -STEPEN * 2, STEPEN * 2])
-                enemie.update()
-
-        if event.type == MYEVENTTYPE:
-            for enemie in all_enemies:
-                enemie.hit(player)
-                if not player.is_alive():
-                    player.hp = 100
-                    player = Player(5, 5)
-                    player.hp = 100
-                    healths.kill()
-                    healths = Health_Player("health_5")
-                    player.add_weapon(sword_for_player)
-                else:
-                    if 50 < player.hp <= 75:
-                        healths.kill()
-                        healths = Health_Player("health_4")
-                    elif 25 < player.hp <= 50:
-                        healths.kill()
-                        healths = Health_Player("health_3")
-                    elif 0 < player.hp <= 25:
-                        healths.kill()
-                        healths = Health_Player("health_2")
-
-        if len(enemies_group) == 0:
-            for spike in spikes_group:
-                if spike.rect.x >= 400:
-                    if not spike.UP_or_DOWN:
-                        spike.UP_or_DOWN = True
-                        for i in range(4):
-                            spike.update()
-                    try:
-                        list_right.remove(spike)
-                    except:
-                        pass
-            ans = pygame.sprite.spritecollide(player, spikes_group, False)
-            if len(ans) >= 4:
-                number_location += 1
-                if number_location > 10:
-                    number_dungeon += 1
-                now_player = player
-                for sprt in all_sprites:
-                    if sprt not in player_group:
-                        sprt.kill()
-                list_top = []
-                list_left = []
-                list_bottom = []
-                list_right = []
-                level = load_level()
-                player, all_enemies, level_x, level_y = generate_level(level)
-                player.kill()
-                player = now_player
-                player.rect.x = 275
-                player.rect.y = 351
-                camera = Camera((level_x, level_y))
-                animations_spikes_cnt = 0
-
-    camera.update(player)
-
-    for sprite in all_sprites:
-        camera.apply(sprite)
-
-    screen.fill(pygame.Color(181, 83, 83))
-    spikes_group.draw(screen)
-    exit_group.draw(screen)
-    tiles_group.draw(screen)
-    enemies_group.draw(screen)
-    player_group.draw(screen)
-    healths_group.draw(screen)
-    pygame.display.flip()
-
-    clock.tick(FPS)
-
-terminate()
+    hour, minute, second = map(int, str(text[2]).split(":"))
+    f.close()
+    murders_numbers = [1 for i in range(int(text[3].strip()))]
+    deltas = datetime.timedelta(hours=hour, minutes=minute, seconds=second)
+else:
+    level = load_level()
+    player, new_enemies, level_x, level_y = generate_level(level)
+    player.add_weapon(sword_for_player)
+    camera = Camera((level_x, level_y))
+    deltas = 0
+    healths = Health_Player("health_5")
+    player.hp = 100
+main_play()
