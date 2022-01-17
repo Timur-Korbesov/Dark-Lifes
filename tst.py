@@ -53,6 +53,7 @@ def load_image(name, width=None, height=None, colorkey=None):
 
 def load_level(number_dungeon, number_location):
     filename = "data/dungeons/dungeon_" + str(number_dungeon) + '/location_' + str(number_location) + '.txt'
+
     # читаем уровень, убирая символы перевода строки
     with open(filename, 'r') as mapFile:
         level_map = [line.strip() for line in mapFile]
@@ -102,7 +103,6 @@ def generate_level(level):
             elif level[y][x] == ':':
                 Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
                 Wall('wall_bottom_right', x, y - 1)
-
             elif level[y][x] == '#':
                 Wall('wall_' + random.choice(['1', '1', '2', '3', 'crack']), x, y)
                 Wall('wall_top', x, y - 1)
@@ -121,9 +121,9 @@ def generate_level(level):
             elif level[y][x] == '&':
                 Tile('floor_1', x, y)
                 new_enemies.append(Enemie_Slime(x, y))
-
     # вернем игрока, а также размер поля в клетках
     return new_player, new_enemies, x, y
+
 
 
 def terminate():
@@ -372,7 +372,7 @@ class BaseEnemy(pygame.sprite.Sprite):
 
 
 class Enemie_Goblin(BaseEnemy):
-    def __init__(self, pos_x, pos_y):
+    def __init__(self, pos_x, pos_y)
         super().__init__('enemie_goblin', pos_x, pos_y)
         self.enemie_weapons.append(sword_for_goblin)
         self.hp = 50
@@ -465,7 +465,6 @@ while running:
             if event.button == 1:
                 for enemie in enemies_group:
                     player.hit(enemie)
-
         for drops in drop_list:
             if drops.rect.colliderect(player.rect):
                 if drop_objects.index(drops.image) == 2:

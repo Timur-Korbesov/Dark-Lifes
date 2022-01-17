@@ -265,7 +265,7 @@ class Wall(Tile):
                         list_right.append(rect)
         elif tile_type == "wall_left" or tile_type == "wall_top_inner_left_2":
             list_left.append(rect)
-        elif tile_type == "wall_bottom" or tile_type == "wall_bottom_left" or tile_type == "wall_bottom_right":
+        if tile_type == "wall_bottom" or tile_type == "wall_bottom_left":
             list_bottom.append(rect)
         elif tile_type == "wall_right" or tile_type == "wall_top_inner_right_2":
             list_right.append(rect)
@@ -550,7 +550,6 @@ while running:
             if event.button == 1:
                 for enemie in enemies_group:
                     player.hit(enemie)
-
         if event.type == ENEMIEGOEVENT:
             for enemie in all_enemies:
                 player_x, player_y = player.rect.x, player.rect.y
